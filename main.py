@@ -6,15 +6,6 @@ SCREEN_W, SCREEN_H = 800, 600
 SPRITE_W, SPRITE_H = 70, 82
 
 
-# 움직임 시작
-def move_start(e):
-    return e[0] == 'MOVE'
-
-# 움직임 정지
-def move_stop(e):
-    return e[0] == 'STOP'
-
-
 class StateMachine:
     def __init__(self,start_state,transitions):
         self.next_state = None
