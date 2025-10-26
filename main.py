@@ -2,7 +2,7 @@
 
 from pico2d import *
 import time
-from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_RIGHT, SDLK_LEFT, SDLK_UP, SDLK_DOWN
+from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_RIGHT, SDLK_LEFT, SDLK_UP, SDLK_DOWN, SDL_QUIT, SDLK_ESCAPE
 
 
 SCREEN_W, SCREEN_H = 800, 600
@@ -31,12 +31,30 @@ class StateMachine:
             return True
         return False
 
+
+
 class Idle:
-    def __init__(self):
-        pass
+    def __init__(self, character):
+      self.character = character
 
     def enter(self, e):
+        self.character.frame = 0
+
+    def exit(self,e):
         pass
+
+    def do(self):
+        key = f'IDLE_{self.character.dir}'
+        info = self.character.sprite_info[key]
+
+        self.character.frame = (self.character.frame + 1) % info['frames']
+
+    def draw(self):
+        key = f'IDLE_{self.character.dir}'
+        info = self.character.get_sprite_info('IDLE')
+        self.character.image.clip_draw(
+            self.character.frame * SPRITE_W, info['row_y'], SPRITE_W, SPRITE_H, self.character.x, self.character.y
+        )
 
 
 class Main_character:
@@ -46,16 +64,40 @@ class Main_character:
         self.dir = 'DOWN'
         self.frame = 0
 
+        self.sprite_info = {
+            'IDLE_DOWN': {'row_idx': 1, 'frames': 10},
+            'IDLE_RIGHT': {'row_idx': 2, 'frames': 10},
+            'IDLE_LEFT': {'row_idx': 3, 'frames': 10},
+            'IDLE_UP': {'row_idx': 4, 'frames': 10},
+        }
+
+        for key in self.sprite_info:
+            info = self.sprite_info[key]
+            info['row_y'] = self.image.h - info['row_idx'] * SPRITE_H
+
+        self.IDLE = Idle(self)
+        self.state_machine = StateMachine(
+            {self.IDLE : {}}
+        )
+
+
+
     def update(self):
         pass
 
     def draw(self):
-        sprite_y = self.image.h - 1 * SPRITE_H
-        sprite_x = 6 * SPRITE_W
-        self.image.clip_draw(sprite_x, sprite_y, SPRITE_W, SPRITE_H, self.x, self.y)
+        self.state_machine.draw()
 
     def handle_event(self, event):
-        pass
+        if event.type == SDL_KEYDOWN:
+            if event.key == SDLK_UP:
+                self.dir = 'UP'
+            elif event.key == SDLK_DOWN:
+                self.dir = 'DOWN'
+            elif event.key == SDLK_LEFT:
+                self.dir = 'LEFT'
+            elif event.key == SDLK_RIGHT:
+                self.dir = 'RIGHT'
 
 
 def handle_events(player):
