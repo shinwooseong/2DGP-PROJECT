@@ -72,6 +72,9 @@ class Roll:
         # 구르기는 8프레임만 있음, 따라서 6번째까지만 1증가하고
         # 7프레임에서는 애니메이션 종료하기!
         if self.character.frame < info['frames'] - 1:
+            self.character.frame += 1
+        else:
+            self.character.state_machine.handle_state_event(('ROLL_DOWN', None))
 
     def draw(self):
         pass
