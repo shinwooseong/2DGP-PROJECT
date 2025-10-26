@@ -1,5 +1,5 @@
 from pico2d import load_image
-from sdl2 import SDL_KEYDOWN, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE, SDL_KEYUP
+from sdl2 import SDLK_a, SDL_KEYDOWN, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE, SDL_KEYUP
 
 from state_machine import StateMachine
 
@@ -9,6 +9,26 @@ from state_machine import StateMachine
 
 SCREEN_W, SCREEN_H = 800, 600
 SPRITE_W, SPRITE_H = 70, 82
+
+
+# A 키로 공격하기
+class Attack:
+    def __init__(self, character):
+        self.character = character
+
+    def enter(self, e):
+        self.character.frame = 0
+
+    def exit(self,e):
+        pass
+
+    def do(self):
+        pass
+
+    def draw(self):
+        pass
+
+
 
 class Walk:
     def __init__(self, character):
