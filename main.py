@@ -56,13 +56,22 @@ class Roll:
         self.character = character
 
     def enter(self, e):
-        pass
+        self.character.frame = 0
 
     def exit(self,e):
         pass
 
     def do(self):
-        pass
+        # Up 일 때는 Down 이미지 사용하기
+        # Up 구르기 이미지 없음..
+        key = f'ROLL_{self.character.dir}'
+        if key == 'ROLL_UP':
+            key = 'ROLL_DOWN'
+        info = self.character.sprite_info[key]
+
+        # 구르기는 8프레임만 있음, 따라서 6번째까지만 1증가하고
+        # 7프레임에서는 애니메이션 종료하기!
+        if self.character.frame < info['frames'] - 1:
 
     def draw(self):
         pass
