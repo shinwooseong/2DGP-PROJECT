@@ -139,6 +139,9 @@ class Main_character:
         self.dir = 'DOWN'
         self.frame = 0
 
+        # 체력
+        self.health = 100
+
         self.key_map = {'UP' : False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
         self.sprite_info = {
