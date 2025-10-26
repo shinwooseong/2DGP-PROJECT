@@ -10,6 +10,7 @@ from state_machine import StateMachine
 SCREEN_W, SCREEN_H = 800, 600
 SPRITE_W, SPRITE_H = 70, 82
 
+# 캐릭터 이미지 변경 예정
 
 # A 키로 공격하기
 class Attack:
