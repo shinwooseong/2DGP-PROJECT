@@ -1,9 +1,11 @@
 from pico2d import load_image
 from sdl2 import SDL_KEYDOWN, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE, SDL_KEYUP
 
-from main import SCREEN_H, SPRITE_H, SPRITE_W, SCREEN_W
 from state_machine import StateMachine
 
+
+SCREEN_W, SCREEN_H = 800, 600
+SPRITE_W, SPRITE_H = 70, 82
 
 class Walk:
     def __init__(self, character):
@@ -72,16 +74,16 @@ class Roll:
         else:
             self.character.state_machine.handle_state_event(('STOP', None))
 
-        move_dist = 10
+        roll_dist = 10
 
         if self.character.dir == 'UP':
-            self.character.y = min(SCREEN_H - SPRITE_H // 2, self.character.y + move_dist)
+            self.character.y = min(SCREEN_H - SPRITE_H // 2, self.character.y + roll_dist)
         elif self.character.dir == 'DOWN':
-            self.character.y = max(SPRITE_H // 2, self.character.y - move_dist)
+            self.character.y = max(SPRITE_H // 2, self.character.y - roll_dist)
         elif self.character.dir == 'LEFT':
-            self.character.x = max(SPRITE_W // 2, self.character.x - move_dist)
+            self.character.x = max(SPRITE_W // 2, self.character.x - roll_dist)
         elif self.character.dir == 'RIGHT':
-            self.character.x = min(SCREEN_W - SPRITE_W // 2, self.character.x + move_dist)
+            self.character.x = min(SCREEN_W - SPRITE_W // 2, self.character.x + roll_dist)
 
     def draw(self):
         key = f'ROLL_{self.character.dir}'

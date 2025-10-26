@@ -2,10 +2,9 @@
 from pico2d import *
 from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE
 
-from main_chracter import Main_character
+import main_chracter
 
-SCREEN_W, SCREEN_H = 800, 600
-SPRITE_W, SPRITE_H = 70, 82
+
 
 
 def handle_events(player):
@@ -21,8 +20,8 @@ def handle_events(player):
 
 
 running = True
-open_canvas(SCREEN_W, SCREEN_H)
-Main_player = Main_character()
+open_canvas(main_chracter.SCREEN_W, main_chracter.SCREEN_H)
+Main_player = main_chracter.Main_character()
 
 while running:
 
