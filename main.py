@@ -51,7 +51,21 @@ class Walk:
 
 
 
+class Roll:
+    def __init__(self, character):
+        self.character = character
 
+    def enter(self, e):
+        pass
+
+    def exit(self,e):
+        pass
+
+    def do(self):
+        pass
+
+    def draw(self):
+        pass
 
 
 
