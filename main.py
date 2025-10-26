@@ -9,7 +9,7 @@ SCREEN_W, SCREEN_H = 800, 600
 SPRITE_W, SPRITE_H = 70, 82
 
 class StateMachine:
-    def __init(self,start_state,transitions):
+    def __init__(self,start_state,transitions):
         self.next_state = None
         self.cur_state = start_state
         self.transitions = transitions
@@ -51,9 +51,12 @@ class Idle:
 
     def draw(self):
         key = f'IDLE_{self.character.dir}'
-        info = self.character.get_sprite_info('IDLE')
+        info = self.character.sprite_info[key]
         self.character.image.clip_draw(
-            self.character.frame * SPRITE_W, info['row_y'], SPRITE_W, SPRITE_H, self.character.x, self.character.y
+            self.character.frame * SPRITE_W,
+            info['row_y'],
+            SPRITE_W, SPRITE_H,
+            self.character.x, self.character.y
         )
 
 
@@ -72,18 +75,21 @@ class Main_character:
         }
 
         for key in self.sprite_info:
+
             info = self.sprite_info[key]
             info['row_y'] = self.image.h - info['row_idx'] * SPRITE_H
 
         self.IDLE = Idle(self)
+
         self.state_machine = StateMachine(
-            {self.IDLE : {}}
+            self.IDLE,
+            {
+
+            }
         )
 
-
-
     def update(self):
-        pass
+        self.state_machine.update()
 
     def draw(self):
         self.state_machine.draw()
