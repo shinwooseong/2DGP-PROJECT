@@ -4,6 +4,9 @@ from sdl2 import SDL_KEYDOWN, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SP
 from state_machine import StateMachine
 
 
+# 캐릭터 상하좌우 움직임 및 구르기 만들었으니
+# 체력과 공격 기능 추가하기!
+
 SCREEN_W, SCREEN_H = 800, 600
 SPRITE_W, SPRITE_H = 70, 82
 
