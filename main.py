@@ -74,7 +74,7 @@ class Roll:
         if self.character.frame < info['frames'] - 1:
             self.character.frame += 1
         else:
-            self.character.state_machine.handle_state_event(('ROLL_DOWN', None))
+            self.character.state_machine.handle_state_event(('STOP', None))
 
         move_dist = 10
 
