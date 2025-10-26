@@ -4,7 +4,7 @@ from pico2d import *
 import time
 
 SCREEN_W, SCREEN_H = 800, 600
-SPRITE_W, SPRITE_H = 60, 72
+SPRITE_W, SPRITE_H = 70, 82
 
 class Idle:
     def __init__(self):
@@ -26,8 +26,8 @@ class Main_character:
 
     def draw(self):
         sprite_y = self.image.h - 1 * SPRITE_H
-        sprite_x = 0 * SPRITE_W
-        self.image.clip_draw(sprite_x, sprite_y, SPRITE_W, SPRITE_H, self.x, self.y, 200, 200)
+        sprite_x = 6 * SPRITE_W
+        self.image.clip_draw(sprite_x, sprite_y, SPRITE_W, SPRITE_H, self.x, self.y)
 
     def handle_event(self, event):
         pass
