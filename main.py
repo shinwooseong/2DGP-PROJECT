@@ -76,8 +76,29 @@ class Roll:
         else:
             self.character.state_machine.handle_state_event(('ROLL_DOWN', None))
 
+        move_dist = 10
+
+        if self.character.dir == 'UP':
+            self.character.y = min(SCREEN_H - SPRITE_H // 2, self.character.y + move_dist)
+        elif self.character.dir == 'DOWN':
+            self.character.y = max(SPRITE_H // 2, self.character.y - move_dist)
+        elif self.character.dir == 'LEFT':
+            self.character.x = max(SPRITE_W // 2, self.character.x - move_dist)
+        elif self.character.dir == 'RIGHT':
+            self.character.x = min(SCREEN_W - SPRITE_W // 2, self.character.x + move_dist)
+
     def draw(self):
-        pass
+        key = f'ROLL_{self.character.dir}'
+        if key == 'ROLL_UP':
+            key = 'ROLL_DOWN'
+        info = self.character.sprite_info[key]
+
+        self.character.image.clip_draw(
+            self.character.frame * SPRITE_W,
+            info['row_y'],
+            SPRITE_W, SPRITE_H,
+            self.character.x, self.character.y
+        )
 
 
 
@@ -131,6 +152,10 @@ class Main_character:
             'WALK_LEFT': {'row_idx': 7, 'frames': 10},
             'WALK_UP': {'row_idx': 8, 'frames': 10},
 
+            'ROLL_DOWN': {'row_idx': 9, 'frames': 8},
+            'ROLL_LEFT': {'row_idx': 10, 'frames': 8},
+            'ROLL_RIGHT': {'row_idx': 11, 'frames': 8},
+
         }
 
         for key in self.sprite_info:
@@ -139,15 +164,21 @@ class Main_character:
 
         self.IDLE = Idle(self)
         self.WALK = Walk(self)
+        self.ROLL = Roll(self)
 
         self.state_machine = StateMachine(
             self.IDLE,
             {
                 self.IDLE: {
-                    'MOVE': lambda e: self.WALK
+                    'MOVE': lambda e: self.WALK,
+                    'SPACE': lambda e: self.ROLL  # 스페이스 누르면 Roll
                 },
                 self.WALK: {
-                    'STOP': lambda e: self.IDLE
+                    'STOP': lambda e: self.IDLE,
+                    'SPACE': lambda e: self.ROLL  # 스페이스 누르면 Roll
+                },
+                self.ROLL: {
+                    'STOP': lambda e: self.IDLE  # 구르기 끝나면 Idle
                 }
             }
         )
@@ -161,17 +192,20 @@ class Main_character:
     def handle_event(self, event):
         if event.type == SDL_KEYDOWN:
             if event.key == SDLK_UP:
-                self.key_map['UP'] = True
+                self.key_map['UP'] = True;
                 self.dir = 'UP'
             elif event.key == SDLK_DOWN:
-                self.key_map['DOWN'] = True
+                self.key_map['DOWN'] = True;
                 self.dir = 'DOWN'
             elif event.key == SDLK_LEFT:
-                self.key_map['LEFT'] = True
+                self.key_map['LEFT'] = True;
                 self.dir = 'LEFT'
             elif event.key == SDLK_RIGHT:
-                self.key_map['RIGHT'] = True
+                self.key_map['RIGHT'] = True;
                 self.dir = 'RIGHT'
+            elif event.key == SDLK_SPACE:
+                # [추가] 스페이스바가 눌리면 'SPACE' 이벤트를 FSM에 전달
+                self.state_machine.handle_state_event(('SPACE', None))
 
         elif event.type == SDL_KEYUP:
             if event.key == SDLK_UP:
