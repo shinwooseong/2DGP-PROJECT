@@ -1,6 +1,6 @@
 import time
 from pico2d import load_image
-from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE
+from sdl2 import SDLK_a, SDLK_u, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE
 
 from state_machine import StateMachine
 
@@ -377,6 +377,14 @@ class Main_character:
         self.last_attack_end_time = 0.0
         self.attack_combo_window = 1.0  # 1초 이내에 재입력 시 2타
 
+        # 배낭 UI 상태
+        self.inventory_open = False
+        try:
+            self.backpack_image = load_image('backpack_in.png')
+        except Exception as e:
+            print(f"배낭 이미지 로드 오류: {e}")
+            self.backpack_image = None
+
         # 상태 인스턴스
         self.IDLE = Idle(self)
         self.WALK = Walk(self)
@@ -444,6 +452,9 @@ class Main_character:
                     else:
                         self.attack_stage = 1
                     self.state_machine.handle_state_event(('ATTACK', None))
+            elif event.key == SDLK_u:
+                # 배낭 UI 토글
+                self.inventory_open = not self.inventory_open
 
         elif event.type == SDL_KEYUP:
             if event.key == SDLK_UP:
