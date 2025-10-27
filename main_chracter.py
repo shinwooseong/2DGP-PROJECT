@@ -186,6 +186,7 @@ class Attack:
         self.frame_time_acc = 0.0
         self.start_time = 0.0
         self._last_time = 0.0
+        self.animation_ended = False  # 애니메이션 완료 플래그
 
     def enter(self, e):
         self.stage = getattr(self.character, 'attack_stage', 1)
@@ -193,22 +194,19 @@ class Attack:
         self.frame = 0
         self.frame_time_acc = 0.0
         self.start_time = time.time()
-        self._last_time = self.start_time  # 추가: _last_time 초기화
-        # 버튼 재입력 기록 플래그 초기화
+        self._last_time = self.start_time
+        self.animation_ended = False  # 플래그 초기화
         self.character.next_attack_request = False
 
     def exit(self, e):
         pass
 
     def do(self):
-        #키 입력에 따른 프레임 수 , 프레임 타임 결정
         frames = self.character.attack_frames[self.stage][self.character.dir]
         frame_time = 0.07 if self.stage == 1 else 0.06
 
-        # 실제 시간으로 누적 (character.dt 대신 사용)
         now = time.time()
         elapsed = now - self._last_time
-
         elapsed = min(elapsed, 0.1)
         self.frame_time_acc += elapsed
         self._last_time = now
@@ -218,20 +216,22 @@ class Attack:
             self.frame += 1
 
             if self.frame >= frames:
+                self.animation_ended = True
+
+                # 애니메이션이 끝났을 때
                 if self.stage == 1 and self.character.next_attack_request:
-                    # 1타 도중 또는 1타 종료 전에 재입력 시 2타 발동
+                    # 1타 완료 후 재입력 감지 → 2타 발동
                     self.stage = 2
                     self.character.attack_stage = 2
-                    self.frame =0
+                    self.frame = 0
                     self.frame_time_acc = 0.0
+                    self.animation_ended = False
                     self.character.next_attack_request = False
-                    # 방향은 현재 dir 사용
-                    # 즉, 내가 왼쪽 공격했다가 오른쪽키 눌러서 이동하고 다시 공격시 그 방향 공격함
                     frames = self.character.attack_frames[self.stage][self.character.dir]
                     frame_time = 0.06
                     continue
                 else:
-                    # 공격 종료
+                    # 공격 종료 - 1초 내 재입력 대기
                     self.character.last_attack_end_time = time.time()
                     self.character.next_attack_request = False
                     self.character.state_machine.handle_state_event(('STOP', None))
