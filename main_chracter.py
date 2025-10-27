@@ -185,12 +185,15 @@ class Attack:
         self.frame = 0
         self.frame_time_acc = 0.0
         self.start_time = 0.0
+        self._last_time = 0.0
 
     def enter(self, e):
-        self.stage = getattr(self.character, 'attak_stage', 1)
+        self.stage = getattr(self.character, 'attack_stage', 1)
         self.character.frame = 0
+        self.frame = 0
         self.frame_time_acc = 0.0
         self.start_time = time.time()
+        self._last_time = self.start_time  # 추가: _last_time 초기화
         # 버튼 재입력 기록 플래그 초기화
         self.character.next_attack_request = False
 
@@ -202,7 +205,14 @@ class Attack:
         frames = self.character.attack_frames[self.stage][self.character.dir]
         frame_time = 0.07 if self.stage == 1 else 0.06
 
-        self.frame_time_acc += self.character.dt
+        # 실제 시간으로 누적 (character.dt 대신 사용)
+        now = time.time()
+        elapsed = now - self._last_time
+
+        elapsed = min(elapsed, 0.1)
+        self.frame_time_acc += elapsed
+        self._last_time = now
+
         while self.frame_time_acc >= frame_time:
             self.frame_time_acc -= frame_time
             self.frame += 1
@@ -217,7 +227,7 @@ class Attack:
                     self.character.next_attack_request = False
                     # 방향은 현재 dir 사용
                     # 즉, 내가 왼쪽 공격했다가 오른쪽키 눌러서 이동하고 다시 공격시 그 방향 공격함
-                    frmaes = self.character.attack_frames[self.stage][self.character.dir]
+                    frames = self.character.attack_frames[self.stage][self.character.dir]
                     frame_time = 0.06
                     continue
                 else:
@@ -426,4 +436,3 @@ class Main_character:
                 self.key_map['LEFT'] = False
             elif event.key == SDLK_RIGHT:
                 self.key_map['RIGHT'] = False
-
