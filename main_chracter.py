@@ -274,73 +274,106 @@ class Main_character:
             'RIGHT': load_image('RUN/run_right.png'),
         }
 
+        self.attack_images = {
+            1: {
+                'DOWN': load_image('ATTACK 1/attack1_down.png'),
+                'UP': load_image('ATTACK 1/attack1_up.png'),
+                'LEFT': load_image('ATTACK 1/attack1_left.png'),
+                'RIGHT': load_image('ATTACK 1/attack1_right.png'),
+            },
+            2: {
+                'DOWN': load_image('ATTACK 2/attack2_down.png'),
+                'UP': load_image('ATTACK 2/attack2_up.png'),
+                'LEFT': load_image('ATTACK 2/attack2_left.png'),
+                'RIGHT': load_image('ATTACK 2/attack2_right.png'),
+            }
+        }
+
         # 각 방향별 프레임 수 (모두 8프레임)
         self.idle_frames = {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}
         self.run_frames = {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}
+        self.attack_frames = {1: {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']},
+                              2: {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}}
 
         # 각 이미지의 Y 오프셋 자동 계산 (PIL 사용)
         self.idle_y_offsets = {}
         self.run_y_offsets = {}
+        self.attack_y_offsets = {1: {}, 2: {}}
 
         try:
             from PIL import Image
             import numpy as np
 
-            # idle 이미지들의 Y 오프셋 계산
+            # IDLE
             for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
                 img_path = f'IDLE/idle_{direction.lower()}.png'
                 pil_img = Image.open(img_path).convert('RGBA')
                 arr = np.array(pil_img)
-
-                # alpha 채널에서 non-transparent 픽셀의 Y 범위 찾기
                 alpha = arr[:, :, 3]
                 rows_with_pixels = np.where(alpha.any(axis=1))[0]
+                self.idle_y_offsets[direction] = int(rows_with_pixels[0]) if len(rows_with_pixels) > 0 else 0
 
-                if len(rows_with_pixels) > 0:
-                    top_y = int(rows_with_pixels[0])
-                    self.idle_y_offsets[direction] = top_y
-                else:
-                    self.idle_y_offsets[direction] = 0
-
-            # run 이미지들의 Y 오프셋 계산
+            # RUN
             for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
                 img_path = f'RUN/run_{direction.lower()}.png'
                 pil_img = Image.open(img_path).convert('RGBA')
                 arr = np.array(pil_img)
-
                 alpha = arr[:, :, 3]
                 rows_with_pixels = np.where(alpha.any(axis=1))[0]
+                self.run_y_offsets[direction] = int(rows_with_pixels[0]) if len(rows_with_pixels) > 0 else 0
 
-                if len(rows_with_pixels) > 0:
-                    top_y = int(rows_with_pixels[0])
-                    self.run_y_offsets[direction] = top_y
-                else:
-                    self.run_y_offsets[direction] = 0
+            # ATTACK (stage 1, 2)
+            for stage in (1, 2):
+                for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
+                    img_path = f'ATTACK {stage}/attack_{direction.lower()}.png'
+                    pil_img = Image.open(img_path).convert('RGBA')
+                    arr = np.array(pil_img)
+                    alpha = arr[:, :, 3]
+                    rows_with_pixels = np.where(alpha.any(axis=1))[0]
+                    self.attack_y_offsets[stage][direction] = int(rows_with_pixels[0]) if len(
+                        rows_with_pixels) > 0 else 0
 
         except Exception as e:
             print(f"Y offset 계산 오류: {e}")
-            # 기본값으로 모두 0 설정
             for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
                 self.idle_y_offsets[direction] = 0
                 self.run_y_offsets[direction] = 0
+            for stage in (1, 2):
+                for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
+                    self.attack_y_offsets[stage][direction] = 0
+
+
+            # 공격 콤보 상태
+        self.attack_stage = 1
+        self.next_attack_request = False
+        self.last_attack_end_time = 0.0
+        self.attack_combo_window = 1.0  # 1초 이내에 재입력 시 2타
 
         # 상태 인스턴스
         self.IDLE = Idle(self)
         self.WALK = Walk(self)
         self.ROLL = Roll(self)
+        self.ATTACK = Attack(self)
+
 
         self.state_machine = StateMachine(
             self.IDLE,
             {
                 self.IDLE: {
                     'MOVE': lambda e: self.WALK,
-                    'SPACE': lambda e: self.ROLL
+                    'SPACE': lambda e: self.ROLL,
+                    'ATTACK': lambda e: self.ATTACK
                 },
                 self.WALK: {
                     'STOP': lambda e: self.IDLE,
-                    'SPACE': lambda e: self.ROLL
+                    'SPACE': lambda e: self.ROLL,
+                    'ATTACK': lambda e: self.ATTACK
                 },
                 self.ROLL: {
+                    'STOP': lambda e: self.IDLE,
+                    'ATTACK': lambda e: self.ATTACK
+                },
+                self.ATTACK: {
                     'STOP': lambda e: self.IDLE
                 }
             }
@@ -371,6 +404,18 @@ class Main_character:
                 self.dir = 'RIGHT'
             elif event.key == SDLK_SPACE:
                 self.state_machine.handle_state_event(('SPACE', None))
+            elif event.key == SDLK_a:
+                now = time.time()
+                if self.state_machine.cur_state is self.ATTACK:
+                    # 공격 중 재입력은 체인 요청으로 표시
+                    self.next_attack_request = True
+                else:
+                    # 이전 공격이 끝난지 1초 이내면 2타로 시작, 아니면 1타
+                    if now - self.last_attack_end_time <= self.attack_combo_window:
+                        self.attack_stage = 2
+                    else:
+                        self.attack_stage = 1
+                    self.state_machine.handle_state_event(('ATTACK', None))
 
         elif event.type == SDL_KEYUP:
             if event.key == SDLK_UP:
