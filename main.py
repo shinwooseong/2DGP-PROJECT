@@ -3,11 +3,12 @@ from pico2d import *
 from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE
 
 import main_chracter
+import inventory
 
 
 
 
-def handle_events(player):
+def handle_events(player, inv):
     global running
     events = get_events()
     for event in events:
@@ -17,35 +18,27 @@ def handle_events(player):
             running = False
         else:
             player.handle_event(event)
-
-
-def draw_inventory_ui(player):
-    # 배낭 UI 그리기
-    if player.inventory_open and player.backpack_image:
-        # 배낭 이미지를 화면 중앙에 그리기
-        center_x = main_chracter.SCREEN_W // 2
-        center_y = main_chracter.SCREEN_H // 2
-
-        player.backpack_image.draw(center_x, center_y)
+            inv.handle_event(event)
 
 
 running = True
 open_canvas(main_chracter.SCREEN_W, main_chracter.SCREEN_H)
 Main_player = main_chracter.Main_character()
+Main_inventory = inventory.Inventory()
 
 while running:
 
     # 이벤트 처리
-    handle_events(Main_player)
+    handle_events(Main_player, Main_inventory)
 
     # 배낭이 열려있지 않을 때만 객체 업데이트 (캐릭터, 배경 움직이지 않음)
-    if not Main_player.inventory_open:
+    if not Main_inventory.is_open:
         Main_player.update()
 
     # 그리기
     clear_canvas()
     Main_player.draw()
-    draw_inventory_ui(Main_player)
+    Main_inventory.draw()
     update_canvas()
 
     delay(0.01)
