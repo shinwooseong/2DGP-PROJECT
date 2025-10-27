@@ -177,6 +177,24 @@ class Roll:
             self.character.y,
         )
 
+# 공격 구현 시작
+class Attack:
+    def __init__(self, character):
+        self.character = character
+
+    def enter(self, e):
+        pass
+
+    def exit(self, e):
+        pass
+
+    def do(self):
+        pass
+
+    def draw(self):
+        pass
+
+
 
 class Main_character:
     def __init__(self):
@@ -186,6 +204,7 @@ class Main_character:
         self.frame = 0
 
         self.health = 100
+        self.attack = 10
         self.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
         # 시간 관련
