@@ -211,6 +211,24 @@ class Attack:
         self.frame_time_acc += elapsed
         self._last_time = now
 
+        # 공격 중에도 이동 가능 (공격 방향은 유지하되, 이동은 허용)
+        dx = 0.0
+        dy = 0.0
+        move_speed = 70.0  # 공격 중 이동 속도 (일반 이동보다 느림)
+        if self.character.key_map['UP']:
+            dy += move_speed * elapsed
+        if self.character.key_map['DOWN']:
+            dy -= move_speed * elapsed
+        if self.character.key_map['LEFT']:
+            dx -= move_speed * elapsed
+        if self.character.key_map['RIGHT']:
+            dx += move_speed * elapsed
+
+        # 이동 적용 및 화면 경계
+        if dx != 0.0 or dy != 0.0:
+            self.character.x = max(SPRITE_W // 2, min(SCREEN_W - SPRITE_W // 2, self.character.x + dx))
+            self.character.y = max(SPRITE_H // 2, min(SCREEN_H - SPRITE_H // 2, self.character.y + dy))
+
         while self.frame_time_acc >= frame_time:
             self.frame_time_acc -= frame_time
             self.frame += 1
@@ -270,32 +288,32 @@ class Main_character:
 
         # IDLE 이미지 로드 (각 방향별)
         self.idle_images = {
-            'DOWN': load_image('IDLE/idle_down.png'),
-            'UP': load_image('IDLE/idle_up.png'),
-            'LEFT': load_image('IDLE/idle_left.png'),
-            'RIGHT': load_image('IDLE/idle_right.png'),
+            'DOWN': load_image('or_character/IDLE/idle_down.png'),
+            'UP': load_image('or_character/IDLE/idle_up.png'),
+            'LEFT': load_image('or_character/IDLE/idle_left.png'),
+            'RIGHT': load_image('or_character/IDLE/idle_right.png'),
         }
 
         # RUN 이미지 로드 (각 방향별)
         self.run_images = {
-            'DOWN': load_image('RUN/run_down.png'),
-            'UP': load_image('RUN/run_up.png'),
-            'LEFT': load_image('RUN/run_left.png'),
-            'RIGHT': load_image('RUN/run_right.png'),
+            'DOWN': load_image('or_character/RUN/run_down.png'),
+            'UP': load_image('or_character/RUN/run_up.png'),
+            'LEFT': load_image('or_character/RUN/run_left.png'),
+            'RIGHT': load_image('or_character/RUN/run_right.png'),
         }
 
         self.attack_images = {
             1: {
-                'DOWN': load_image('ATTACK 1/attack1_down.png'),
-                'UP': load_image('ATTACK 1/attack1_up.png'),
-                'LEFT': load_image('ATTACK 1/attack1_left.png'),
-                'RIGHT': load_image('ATTACK 1/attack1_right.png'),
+                'DOWN': load_image('or_character/ATTACK 1/attack1_down.png'),
+                'UP': load_image('or_character/ATTACK 1/attack1_up.png'),
+                'LEFT': load_image('or_character/ATTACK 1/attack1_left.png'),
+                'RIGHT': load_image('or_character/ATTACK 1/attack1_right.png'),
             },
             2: {
-                'DOWN': load_image('ATTACK 2/attack2_down.png'),
-                'UP': load_image('ATTACK 2/attack2_up.png'),
-                'LEFT': load_image('ATTACK 2/attack2_left.png'),
-                'RIGHT': load_image('ATTACK 2/attack2_right.png'),
+                'DOWN': load_image('or_character/ATTACK 2/attack2_down.png'),
+                'UP': load_image('or_character/ATTACK 2/attack2_up.png'),
+                'LEFT': load_image('or_character/ATTACK 2/attack2_left.png'),
+                'RIGHT': load_image('or_character/ATTACK 2/attack2_right.png'),
             }
         }
 
