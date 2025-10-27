@@ -5,7 +5,7 @@ from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIG
 from state_machine import StateMachine
 
 SCREEN_W, SCREEN_H = 1000, 1000
-SPRITE_W, SPRITE_H = 70, 82
+SPRITE_W, SPRITE_H = 96, 80  # 실제 이미지 크기: 768x80 = 8프레임 × 96x80
 
 # 이동 속도(px/sec)
 WALK_SPEED = 140.0
@@ -27,7 +27,6 @@ class Idle:
 
     def do(self):
         # 시간 기반 프레임 진행
-        image = self.character.idle_images[self.character.dir]
         frames = self.character.idle_frames[self.character.dir]
 
         self.character.frame_time_acc += self.character.dt
@@ -45,10 +44,11 @@ class Idle:
         frames = self.character.idle_frames[self.character.dir]
         frame_idx = int(self.character.frame) % frames
 
-        # 각 프레임이 가로로 배열되어 있음
+        # 각 프레임이 가로로 배열되어 있음 (X축만)
         x_offset = frame_idx * SPRITE_W
+        y_offset = self.character.idle_y_offsets[self.character.dir]
         image.clip_draw(
-            x_offset, 0,
+            x_offset, y_offset,
             SPRITE_W, SPRITE_H,
             self.character.x,
             self.character.y,
@@ -68,7 +68,6 @@ class Walk:
 
     def do(self):
         # 시간 기반 프레임 증가
-        image = self.character.run_images[self.character.dir]
         frames = self.character.run_frames[self.character.dir]
 
         self.character.frame_time_acc += self.character.dt
@@ -104,8 +103,9 @@ class Walk:
         frame_idx = int(self.character.frame) % frames
 
         x_offset = frame_idx * SPRITE_W
+        y_offset = self.character.run_y_offsets[self.character.dir]
         image.clip_draw(
-            x_offset, 0,
+            x_offset, y_offset,
             SPRITE_W, SPRITE_H,
             self.character.x,
             self.character.y,
@@ -135,7 +135,6 @@ class Roll:
         elif self.character.key_map['RIGHT']:
             self.character.dir = 'RIGHT'
 
-        image = self.character.run_images[self.character.dir]
         frames = self.character.run_frames[self.character.dir]
 
         # 시간 기반 프레임 진행 (마지막 프레임에서 STOP)
@@ -170,8 +169,9 @@ class Roll:
         frame_idx = int(self.character.frame) % frames
 
         x_offset = frame_idx * SPRITE_W
+        y_offset = self.character.run_y_offsets[self.character.dir]
         image.clip_draw(
-            x_offset, 0,
+            x_offset, y_offset,
             SPRITE_W, SPRITE_H,
             self.character.x,
             self.character.y,
@@ -210,14 +210,55 @@ class Main_character:
             'RIGHT': load_image('RUN/run_right.png'),
         }
 
-        # 각 방향별 프레임 수 (이미지 로드 후 계산)
-        self.idle_frames = {}
-        self.run_frames = {}
+        # 각 방향별 프레임 수 (모두 8프레임)
+        self.idle_frames = {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}
+        self.run_frames = {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}
 
-        for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-            # idle과 run 모두 8프레임 고정
-            self.idle_frames[direction] = 8
-            self.run_frames[direction] = 8
+        # 각 이미지의 Y 오프셋 자동 계산 (PIL 사용)
+        self.idle_y_offsets = {}
+        self.run_y_offsets = {}
+
+        try:
+            from PIL import Image
+            import numpy as np
+
+            # idle 이미지들의 Y 오프셋 계산
+            for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
+                img_path = f'IDLE/idle_{direction.lower()}.png'
+                pil_img = Image.open(img_path).convert('RGBA')
+                arr = np.array(pil_img)
+
+                # alpha 채널에서 non-transparent 픽셀의 Y 범위 찾기
+                alpha = arr[:, :, 3]
+                rows_with_pixels = np.where(alpha.any(axis=1))[0]
+
+                if len(rows_with_pixels) > 0:
+                    top_y = int(rows_with_pixels[0])
+                    self.idle_y_offsets[direction] = top_y
+                else:
+                    self.idle_y_offsets[direction] = 0
+
+            # run 이미지들의 Y 오프셋 계산
+            for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
+                img_path = f'RUN/run_{direction.lower()}.png'
+                pil_img = Image.open(img_path).convert('RGBA')
+                arr = np.array(pil_img)
+
+                alpha = arr[:, :, 3]
+                rows_with_pixels = np.where(alpha.any(axis=1))[0]
+
+                if len(rows_with_pixels) > 0:
+                    top_y = int(rows_with_pixels[0])
+                    self.run_y_offsets[direction] = top_y
+                else:
+                    self.run_y_offsets[direction] = 0
+
+        except Exception as e:
+            print(f"Y offset 계산 오류: {e}")
+            # 기본값으로 모두 0 설정
+            for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
+                self.idle_y_offsets[direction] = 0
+                self.run_y_offsets[direction] = 0
 
         # 상태 인스턴스
         self.IDLE = Idle(self)
