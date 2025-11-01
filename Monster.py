@@ -18,3 +18,15 @@ class Monster:
         # 몬스터의 상태 업데이트 로직 추가
         pass
 
+    def attack(self)
+        # 몬스터 공격 로직 추가:
+        pass
+
+    def move(self):
+        # 몬스터 이동 로직 추가
+        pass
+
+    def range_of_attack(self, target):
+        # 공격 범위 내에 있는지 확인하는 로직 추가
+        pass
+
