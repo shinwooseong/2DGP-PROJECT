@@ -1,10 +1,15 @@
 from pico2d import load_image
 
 class Monster:
-    def __init__(self, x, y):
+    def __init__(self,name='monster',image_path='assets/monsters/monster.png', x=100, y=100, hp=10, speed=0, attack=0):
+        self.name = name
+        self.image_path = image_path
         self.x = x
         self.y = y
-        self.image = load_image('monster.png')  # 몬스터 이미지 로드
+        self.hp = hp
+        self.speed = speed
+        self.attack = attack
+        self.alive = True
 
     def draw(self):
         self.image.draw(self.x, self.y)
