@@ -187,6 +187,7 @@ class Attack:
         self.start_time = 0.0
         self._last_time = 0.0
         self.animation_ended = False  # 애니메이션 완료 플래그
+        self._hit_done = False
 
     def enter(self, e):
         self.stage = getattr(self.character, 'attack_stage', 1)
@@ -197,6 +198,9 @@ class Attack:
         self._last_time = self.start_time
         self.animation_ended = False  # 플래그 초기화
         self.character.next_attack_request = False
+        self._hit_done = False
+        # 메인 루프에서 감지할 플래그
+        self.character.attack_hit_pending = False
 
     def exit(self, e):
         pass
@@ -204,6 +208,9 @@ class Attack:
     def do(self):
         frames = self.character.attack_frames[self.stage][self.character.dir]
         frame_time = 0.07 if self.stage == 1 else 0.06
+
+        # 히트 프레임: 애니의 중간 프레임
+        hit_frame = max(0, frames // 2)
 
         now = time.time()
         elapsed = now - self._last_time
@@ -233,6 +240,11 @@ class Attack:
             self.frame_time_acc -= frame_time
             self.frame += 1
 
+            # 히트 프레임 도달 시 메인 루프에 신호를 보냄 (한 번만)
+            if not self._hit_done and self.frame >= hit_frame:
+                self._hit_done = True
+                self.character.attack_hit_pending = True
+
             if self.frame >= frames:
                 self.animation_ended = True
 
@@ -245,6 +257,9 @@ class Attack:
                     self.frame_time_acc = 0.0
                     self.animation_ended = False
                     self.character.next_attack_request = False
+                    # 콤보로 넘어갈 때 히트 플래그 초기화
+                    self._hit_done = False
+                    self.character.attack_hit_pending = False
                     frames = self.character.attack_frames[self.stage][self.character.dir]
                     frame_time = 0.06
                     continue
@@ -252,6 +267,8 @@ class Attack:
                     # 공격 종료 - 1초 내 재입력 대기
                     self.character.last_attack_end_time = time.time()
                     self.character.next_attack_request = False
+                    self._hit_done = False
+                    self.character.attack_hit_pending = False
                     self.character.state_machine.handle_state_event(('STOP', None))
                     return
 

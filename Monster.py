@@ -87,7 +87,7 @@ class Green_MS(Monster):
         super().__init__(name='green_ms',
                          image_path='MS/green_ms/idle.png',
                          x=x, y=y,
-                         hp=80, speed=30, attack_power=12, attack_range=80)
+                         hp=80, speed=30, attack_power=15, attack_range=80)
 
         # 패트롤 설정
         self._patrol_origin_x = x

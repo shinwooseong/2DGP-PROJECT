@@ -37,6 +37,10 @@ monsters = [
     Green_MS(600, 200),
 ]
 
+
+
+
+
 while running:
 
     # 이벤트 처리
@@ -49,6 +53,19 @@ while running:
     # 몬스터 업데이트: 인벤토리 열려있으면 frozen=True로 정지
     for m in monsters:
         m.update(getattr(Main_player, 'dt', 0.01), frozen=Main_inventory.is_open, player=Main_player)
+
+    # 플레이어 공격 히트 처리 (Attack 상태의 히트 프레임에서 메인 루프가 적용)
+    if getattr(Main_player, 'attack_hit_pending', False):
+        # 플레이어 공격 범위
+        pr = getattr(Main_player, 'attack_range', 80)
+        for m in monsters:
+            dx = m.x - Main_player.x
+            dy = m.y - Main_player.y
+            if dx*dx + dy*dy <= pr * pr:
+                m.take_damage(getattr(Main_player, 'attack', 10))
+                if DEBUG_MONSTERS:
+                    print(f"Player hit M at ({m.x:.1f},{m.y:.1f}) dmg={Main_player.attack} hp_left={m.hp}")
+        Main_player.attack_hit_pending = False
 
     # 디버그 상태 출력 (0.5초 간격)
     if DEBUG_MONSTERS:
@@ -64,6 +81,17 @@ while running:
 
     # 그리기
     clear_canvas()
+    # 콘솔 출력용: 플레이어 HP가 변할 때마다 콘솔에 출력
+    try:
+        hp = int(max(0, getattr(Main_player, 'health', 0)))
+        if hp != _last_hp:
+            print(f"HP: {hp}")
+            _last_hp = hp
+    except Exception:
+        try:
+            print(f"HP: {getattr(Main_player, 'health', 0)}")
+        except Exception:
+            pass
     # 배경이 있으면 먼저 그리고
     for m in monsters:
         m.draw()
