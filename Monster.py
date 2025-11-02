@@ -1,5 +1,9 @@
 from pico2d import load_image
 import time
+import math
+
+# 디버그 출력 켜려면 True로 설정
+DEBUG_MONSTER = True
 
 class Monster:
     def __init__(self,name='monster',image_path='assets/monsters/monster.png', x=100, y=100, hp=10, speed=0, attack_power=0, attack_range=0):
@@ -83,12 +87,14 @@ class Green_MS(Monster):
         super().__init__(name='green_ms',
                          image_path='MS/green_ms/idle.png',
                          x=x, y=y,
-                         hp=80, speed=30, attack_power=12, attack_range=48)
+                         hp=80, speed=30, attack_power=12, attack_range=80)
 
         # 패트롤 설정
         self._patrol_origin_x = x
         self.patrol_width = 120
         self.dir = 1
+        # 탐지 범위(추적 시작 거리)
+        self.sight_range = 400
 
         # 애니메이션 로드 (폴더 구조: MS/green_ms/idle.png 등)
         self.anim_images = {}
@@ -128,16 +134,52 @@ class Green_MS(Monster):
         }
 
         self._death_done = False
+        # 공격 목표 및 히트 처리 플래그
+        self._attack_target = None
+        self._attack_hit_done = False
+        # 기본 히트 프레임: 공격 애니의 중간 프레임
+        self.attack_hit_frame = max(0, (frames_map['attack'] // 2))
 
-    def update(self, dt=0.01, frozen=False):
+    def update(self, dt=0.01, frozen=False, player=None):
         # 정지(예: 인벤토리) 또는 이미 사망 후 처리
         if frozen:
             return
         if self.state == 'death' and self._death_done:
             return
 
-        # 이동: 패트롤
-        if self.patrol_width > 0 and self.speed != 0 and self.state != 'death':
+        # 플레이어 감지/추적/공격 로직
+        chased = False
+        if player is not None and self.alive:
+            dx_p = player.x - self.x
+            dy_p = player.y - self.y
+            dist2 = dx_p * dx_p + dy_p * dy_p
+            # 공격 범위 이내면 공격 시도
+            if dist2 <= (self.attack_range * self.attack_range):
+                if DEBUG_MONSTER:
+                    print(f"Green_MS at ({self.x:.1f},{self.y:.1f}) - player in attack range ({math.sqrt(dist2):.1f}) -> attacking")
+                fired = self.attack(player)
+                if fired:
+                    # 공격 성공하면 이동/패트롤을 멈추고 애니메이션 진행
+                    chased = True
+                    # 방향은 플레이어를 향하도록 설정
+                    self.dir = 1 if dx_p >= 0 else -1
+                    # don't return so animation update runs below
+            # 플레이어가 시야 범위 이내면 추적
+            elif dist2 <= (self.sight_range * self.sight_range):
+                if DEBUG_MONSTER:
+                    print(f"Green_MS at ({self.x:.1f},{self.y:.1f}) - detected player at dist {math.sqrt(dist2):.1f}, chasing")
+                dist = math.sqrt(dist2) if dist2 > 0 else 1.0
+                vx = (dx_p / dist) * self.speed
+                vy = (dy_p / dist) * self.speed
+                # 이동 적용
+                self.x += vx * dt
+                self.y += vy * dt
+                # dir 업데이트 (애니메이션 좌우 반전 등에서 사용)
+                self.dir = 1 if vx >= 0 else -1
+                chased = True
+
+        # 이동: 패트롤 (플레이어 추적 중이 아니면 기본 패트롤 실행)
+        if not chased and self.patrol_width > 0 and self.speed != 0 and self.state != 'death':
             self.x += self.speed * self.dir * dt
             left = self._patrol_origin_x - self.patrol_width / 2
             right = self._patrol_origin_x + self.patrol_width / 2
@@ -155,7 +197,25 @@ class Green_MS(Monster):
         ft = self.frame_time.get(self.state, 0.1)
         while self.frame_time_acc >= ft:
             self.frame_time_acc -= ft
+            prev_frame = int(self.frame)
             self.frame += 1
+            new_frame = int(self.frame)
+
+            # 공격 애니메이션 중 히트 프레임에서 데미지 적용
+            if self.state == 'attack' and self._attack_target is not None and not self._attack_hit_done:
+                hit_idx = self.attack_hit_frame
+                if prev_frame <= hit_idx < new_frame + 1:
+                    # 범위 재검사 후 데미지 적용
+                    try:
+                        if self.range_of_attack(self._attack_target):
+                            if hasattr(self._attack_target, 'take_damage'):
+                                self._attack_target.take_damage(self.attack_power)
+                                if DEBUG_MONSTER:
+                                    print(f"Green_MS hit player for {self.attack_power} at frame {hit_idx}")
+                    except Exception:
+                        pass
+                    self._attack_hit_done = True
+
             # death는 끝나면 고정, 나머지는 루프
             if self.state == 'death':
                 if self.frame >= frames:
@@ -164,6 +224,11 @@ class Green_MS(Monster):
                     self.alive = False
                     break
             else:
+                # 애니 끝나면 공격 목표 초기화
+                if self.state == 'attack' and self.frame >= frames:
+                    # 공격 애니 종료
+                    self._attack_target = None
+                    self._attack_hit_done = False
                 self.frame %= frames
 
     def draw(self):
@@ -208,7 +273,24 @@ class Green_MS(Monster):
         # 공격 시 상태 전환 후 실제 데미지는 부모 로직 사용
         if self.state == 'death':
             return False
-        fired = super().attack(target)
+        # 부모의 공격 쿨다운 체크만 사용하고(데미지는 update에서 히트 프레임에 적용)
+        now = time.time()
+        if now - self.last_attack_time < self.attack_cooldown:
+            return False
+        self.last_attack_time = now
+
+        # 타깃 저장하고 히트 플래그 초기화
+        self._attack_target = target
+        self._attack_hit_done = False
+
+        if DEBUG_MONSTER:
+            try:
+                tx = f"({target.x:.1f},{target.y:.1f})" if target is not None else "(none)"
+            except Exception:
+                tx = "(unknown)"
+            print(f"Green_MS attack start at ({self.x:.1f},{self.y:.1f}) target={tx}")
+
+        fired = True
         if fired:
             self.state = 'attack'
             self.frame = 0

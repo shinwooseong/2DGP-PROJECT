@@ -417,6 +417,17 @@ class Main_character:
     def draw(self):
         self.state_machine.draw()
 
+    def take_damage(self, damage):
+        # 몬스터가 호출하는 피해 처리기: 체력 차감 및 사망 체크
+        try:
+            self.health -= damage
+        except Exception:
+            self.health = getattr(self, 'health', 0) - damage
+        print(f"Player took {damage} dmg. HP={self.health}")
+        if self.health <= 0:
+            print("Player died")
+            # 필요하면 상태 전환(사망 애니 등) 추가
+
     def handle_event(self, event):
         if event.type == SDL_KEYDOWN:
             if event.key == SDLK_UP:
