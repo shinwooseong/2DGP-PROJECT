@@ -33,7 +33,7 @@ class Animator:
                     # rows = frames_map keys order
                     items = list(self.frames_map.items())
                     num_rows = len(items)
-                    max_cols = max(1, max(v for k, v in items))
+                    max_cols = max(1, max(int(v) for k, v in items))
                     fw = max(1, int(getattr(sheet, 'w', 1) // max_cols))
                     fh = max(1, int(getattr(sheet, 'h', 1) // num_rows))
                     # try PIL for bbox extraction
@@ -80,9 +80,11 @@ class Animator:
                         arr = np.array(pil)
                         alpha = arr[:, :, 3]
                         rows = np.where(alpha.any(axis=1))[0]
+                        # ensure starts/dists are always defined to avoid debug-time reference issues
+                        starts = []
+                        dists = []
                         if len(rows) > 0:
                             # collect start rows of visible blocks
-                            starts = []
                             prev = None
                             for r in rows:
                                 if prev is None or r != prev + 1:
@@ -120,10 +122,12 @@ class Animator:
                         # debug output to help diagnose incorrect frame height detection
                         if DEBUG_MONSTER:
                             try:
+                                s = starts if 'starts' in locals() else []
+                                d = dists if 'dists' in locals() else []
                                 print(f"Animator vertical-detect: file={single_image_path} H={H} expected_total={expected_total}")
-                                print(f"  rows_count={len(rows)} starts={starts[:10]}{'...' if len(starts)>10 else ''}")
-                                if 'dists' in locals():
-                                    print(f"  dists sample={dists[:10]}{'...' if len(dists)>10 else ''} -> frame_h(candidate)={frame_h}")
+                                print(f"  rows_count={len(rows)} starts={s[:10]}{'...' if len(s)>10 else ''}")
+                                if d:
+                                    print(f"  dists sample={d[:10]}{'...' if len(d)>10 else ''} -> frame_h(candidate)={frame_h}")
                                 else:
                                     print(f"  single-block segs sample, chosen frame_h={frame_h}")
                             except Exception:
@@ -673,10 +677,14 @@ class Trash_Monster(Monster):
 class Red_MS(Monster):
     def __init__(self, x=500, y=150):
         super().__init__(name='red_ms', x=x, y=y, hp=100, speed=35)
-        frames_map = {'idle': 5, 'attack': 12, 'damaged': 3, 'death': 6}
-        frame_time = {'idle': 0.11, 'attack': 0.06, 'damaged': 0.09, 'death': 0.1}
-        self.animator = Animator('MS/red_ms', frames_map, frame_time)
+        # per-state images are in MS/red_magic_ms/{idle,attack,damaged,death}.png
+        # each state's image has frames stacked vertically
+        frames_map = {'idle': 5, 'attack': 8, 'damaged': 2, 'death': 5}
+        frame_time = {'idle': 0.11, 'attack': 0.06, 'damaged': 0.09, 'death': 0.10}
+        # use vertical layout so each state's PNG is interpreted as vertically stacked frames
+        self.animator = Animator('MS/red_magic_ms', frames_map, frame_time, layout='vertical')
         self.combat = Combat(attack_power=20, attack_range=90, cooldown=0.5, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
+        # give it a patrol so it moves a bit
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=150, sight_range=450)
         self.state = self.animator.state
 
