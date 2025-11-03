@@ -670,4 +670,14 @@ class Trash_Monster(Monster):
             pass
 
 
+class Red_MS(Monster):
+    def __init__(self, x=500, y=150):
+        super().__init__(name='red_ms', x=x, y=y, hp=100, speed=35)
+        frames_map = {'idle': 5, 'attack': 12, 'damaged': 3, 'death': 6}
+        frame_time = {'idle': 0.11, 'attack': 0.06, 'damaged': 0.09, 'death': 0.1}
+        self.animator = Animator('MS/red_ms', frames_map, frame_time)
+        self.combat = Combat(attack_power=20, attack_range=90, cooldown=0.5, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
+        self.ai = SimpleAI(patrol_origin_x=x, patrol_width=150, sight_range=450)
+        self.state = self.animator.state
+
 # EOF
