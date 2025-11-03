@@ -4,7 +4,7 @@ from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE
 
 import main_chracter
 import inventory
-from Monster import Green_MS, EyeBall
+from Monster import Green_MS, EyeBall, Trash_Monster
 
 # 디버그 출력 켜면 콘솔로 상태 출력
 DEBUG_MONSTERS = True
@@ -35,6 +35,7 @@ Main_inventory = inventory.Inventory()
 monsters = [
     Green_MS(300, 200),
     Green_MS(600, 200),
+    Trash_Monster(100, 100),
     EyeBall(400, 400),
 ]
 
