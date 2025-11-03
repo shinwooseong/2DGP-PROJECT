@@ -4,12 +4,12 @@ from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE
 
 import main_chracter
 import inventory
-from Monster import Green_MS
-import time
+from Monster import Green_MS, EyeBall
 
 # 디버그 출력 켜면 콘솔로 상태 출력
 DEBUG_MONSTERS = True
 _last_dbg = 0.0
+_last_hp = None
 
 
 
@@ -35,10 +35,22 @@ Main_inventory = inventory.Inventory()
 monsters = [
     Green_MS(300, 200),
     Green_MS(600, 200),
+    EyeBall(400, 400),
 ]
 
 
-
+# 디버그: 생성된 몬스터와 애니메이터 시트 로드 상태 출력
+if DEBUG_MONSTERS:
+    print("Monsters summary:")
+    for i, m in enumerate(monsters):
+        try:
+            sheet = getattr(m.animator, 'sheet_image', None)
+            sheet_info = None
+            if sheet is not None:
+                sheet_info = (getattr(sheet, 'w', None), getattr(sheet, 'h', None))
+            print(f"  M{i}: {m.__class__.__name__} pos=({m.x},{m.y}) animator_sheet={sheet_info} frames_map={getattr(m.animator,'frames_map',None)}")
+        except Exception as e:
+            print(f"  M{i}: {m.__class__.__name__} - debug error: {e}")
 
 
 while running:
@@ -67,17 +79,6 @@ while running:
                     print(f"Player hit M at ({m.x:.1f},{m.y:.1f}) dmg={Main_player.attack} hp_left={m.hp}")
         Main_player.attack_hit_pending = False
 
-    # 디버그 상태 출력 (0.5초 간격)
-    if DEBUG_MONSTERS:
-        now = time.time()
-        if now - _last_dbg >= 0.5:
-            _last_dbg = now
-            print(f"Player @ ({Main_player.x:.1f},{Main_player.y:.1f})")
-            for i, m in enumerate(monsters):
-                dx = Main_player.x - m.x
-                dy = Main_player.y - m.y
-                dist = (dx*dx+dy*dy)**0.5
-                print(f"  M{i}: {m.__class__.__name__} state={getattr(m,'state',None)} pos=({m.x:.1f},{m.y:.1f}) dist={dist:.1f}")
 
     # 그리기
     clear_canvas()

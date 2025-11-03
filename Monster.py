@@ -7,17 +7,13 @@ DEBUG_MONSTER = True
 
 
 class Animator:
-    """애니메이션 로드/프레임 관리 컴포넌트
-    폴더에 idle.png, attack.png, damaged.png, death.png 가로로 프레임이 이어진 시트라고 가정.
-    frames_map: {'idle':n, 'attack':n, ...}
-    frame_time: 상태별 프레임 시간
+    """Animation loader and frame manager.
+    Supports per-state images (horizontal or vertical layouts) and a single vertical sheet containing
+    all frames stacked.
+    frames_map: dict with counts for 'idle','attack','damaged','death'
+    frame_time: dict with per-state frame durations
     """
     def __init__(self, folder, frames_map, frame_time, layout='horizontal', single_image_path=None):
-        """Animator supports:
-        - regular folder mode: folder/<state>.png where each state image is a horizontal strip of frames
-        - single_image_path mode: a single sprite sheet (vertical frames) that contains frames for states in order.
-        layout: 'horizontal' (default) or 'vertical' for per-state images.
-        """
         self.folder = folder
         self.frames_map = frames_map.copy()
         self.frame_time_map = frame_time.copy()
@@ -25,30 +21,37 @@ class Animator:
         self.frame_bboxes = {}
         self.layout = layout
         self.sheet_image = None
-        self.sheet_state_offsets = {}  # for single_image_path: {state: (start_index, frames)}
+        self.sheet_state_offsets = {}
 
-        # If a single_image_path is provided, load and split by vertical frames total
+        # If a single vertical sheet is provided, load it and compute per-state offsets
         if single_image_path:
             try:
                 sheet = load_image(single_image_path)
                 self.sheet_image = sheet
-                # compute total frames = sum of frames_map
-                totals = sum(self.frames_map.get(s, 1) for s in ('idle', 'attack', 'damaged', 'death'))
-                total_frames = max(1, totals)
-                # assume vertical stacking
+                if DEBUG_MONSTER:
+                    try:
+                        print(f"Animator: loaded sheet '{single_image_path}' size=({getattr(sheet,'w',0)},{getattr(sheet,'h',0)})")
+                    except Exception:
+                        print(f"Animator: loaded sheet '{single_image_path}'")
+                # total frames = sum of frames_map
+                total_frames = max(1, sum(self.frames_map.get(s, 1) for s in ('idle', 'attack', 'damaged', 'death')))
                 fw = getattr(sheet, 'w', 1)
-                fh = getattr(sheet, 'h', 1) // total_frames if total_frames > 0 else getattr(sheet, 'h', 1)
-                # assign state offsets
-                idx = 0
+                fh = max(1, getattr(sheet, 'h', 1) // total_frames)
+                if DEBUG_MONSTER:
+                    print(f"Animator: total_frames={total_frames}, frame size=({fw},{fh})")
+                # try to open with PIL to compute precise per-frame bbox
                 try:
                     from PIL import Image
                     pil = Image.open(single_image_path).convert('RGBA')
                 except Exception:
                     pil = None
+                # assign offsets and compute bboxes per state
+                idx = 0
                 for state in ('idle', 'attack', 'damaged', 'death'):
-                    fcount = self.frames_map.get(state, 1)
+                    fcount = int(self.frames_map.get(state, 1))
                     self.sheet_state_offsets[state] = (idx, fcount)
-                    # compute per-frame bbox from pil if available
+                    if DEBUG_MONSTER:
+                        print(f"Animator: state {state} offset {idx}, frames {fcount}")
                     bboxes = []
                     for i in range(fcount):
                         if pil is not None:
@@ -68,8 +71,9 @@ class Animator:
                             bboxes.append((0, 0, fw, fh))
                     self.frame_bboxes[state] = bboxes
                     idx += fcount
-            except Exception:
-                # fallback: no sheet
+            except Exception as e:
+                if DEBUG_MONSTER:
+                    print(f"Animator: failed to load single sheet '{single_image_path}': {e}")
                 self.sheet_image = None
                 for state in ('idle', 'attack', 'damaged', 'death'):
                     self.images[state] = None
@@ -80,21 +84,21 @@ class Animator:
             self._death_done = False
             return
 
-        # folder-based loading (per-state image files)
+        # Folder-based per-state loading (horizontal or vertical per-state images)
         for state in ('idle', 'attack', 'damaged', 'death'):
             path = f"{folder}/{state}.png"
             try:
                 img = load_image(path)
                 self.images[state] = img
-                # compute per-frame bbox using PIL if available
+                # try PIL-based bbox extraction
                 try:
                     from PIL import Image
                     pil = Image.open(path).convert('RGBA')
-                    frames = self.frames_map.get(state, 1)
+                    frames = int(self.frames_map.get(state, 1))
+                    bboxes = []
                     if layout == 'horizontal':
                         fw = max(1, getattr(img, 'w', 1) // max(1, frames))
                         fh = getattr(img, 'h', 1)
-                        bboxes = []
                         for i in range(frames):
                             left = i * fw
                             frame_img = pil.crop((left, 0, left + fw, fh))
@@ -108,10 +112,9 @@ class Animator:
                                 br = r
                                 bt = fh - u
                                 bboxes.append((bl, bb, br, bt))
-                    else:  # vertical layout per-state
+                    else:
                         fh = max(1, getattr(img, 'h', 1) // max(1, frames))
                         fw = getattr(img, 'w', 1)
-                        bboxes = []
                         for i in range(frames):
                             top = i * fh
                             frame_img = pil.crop((0, top, fw, top + fh))
@@ -127,8 +130,8 @@ class Animator:
                                 bboxes.append((bl, bb, br, bt))
                     self.frame_bboxes[state] = bboxes
                 except Exception:
-                    # no PIL -> default full-frame bboxes
-                    frames = self.frames_map.get(state, 1)
+                    # fallback: full-frame bboxes
+                    frames = int(self.frames_map.get(state, 1))
                     if layout == 'horizontal':
                         fw = max(1, getattr(img, 'w', 1) // frames)
                         fh = getattr(img, 'h', 1)
@@ -139,6 +142,7 @@ class Animator:
             except Exception:
                 self.images[state] = None
                 self.frame_bboxes[state] = []
+
         self.state = 'idle'
         self.frame = 0
         self.acc = 0.0
@@ -156,8 +160,8 @@ class Animator:
     def update(self, dt):
         if self.state == 'death' and self._death_done:
             return
-        frames = self.frames_map.get(self.state, 1)
-        ft = self.frame_time_map.get(self.state, 0.1)
+        frames = int(self.frames_map.get(self.state, 1))
+        ft = float(self.frame_time_map.get(self.state, 0.1))
         self.acc += dt
         while self.acc >= ft:
             self.acc -= ft
@@ -171,57 +175,58 @@ class Animator:
                 self.frame %= frames
 
     def draw(self, x, y):
-        img = self.images.get(self.state)
-        frames = self.frames_map.get(self.state, 1)
+        # draw from single-sheet or per-state images depending on how initialized
+        frames = int(self.frames_map.get(self.state, 1))
         if self.sheet_image is not None:
-            # single-sheet vertical layout drawing
             sheet = self.sheet_image
             fw = getattr(sheet, 'w', 1)
-            # find state offset
+            # state offset and local frame index
             start, cnt = self.sheet_state_offsets.get(self.state, (0, 1))
-            total_idx = start + (int(self.frame) % cnt)
-            fh = getattr(sheet, 'h', 1) // sum(self.frames_map.get(s, 1) for s in ('idle', 'attack', 'damaged', 'death'))
-            top = total_idx * fh
-            sheet.clip_draw(0, top, fw, fh, x, y)
+            idx = start + (int(self.frame) % cnt)
+            total_frames = sum(int(self.frames_map.get(s, 1)) for s in ('idle', 'attack', 'damaged', 'death'))
+            fh = max(1, getattr(sheet, 'h', 1) // total_frames)
+            # pico2d.clip_draw expects coordinates with y from bottom; sheet image origin handling
+            bottom = max(0, getattr(sheet, 'h', 1) - (idx + 1) * fh)
+            try:
+                sheet.clip_draw(0, bottom, fw, fh, x, y)
+            except Exception:
+                # if clip_draw fails, silently skip drawing
+                if DEBUG_MONSTER:
+                    print("Animator: sheet.clip_draw failed")
             return
-        if img:
-            if self.layout == 'horizontal':
-                fw = max(1, img.w // frames)
-                fh = img.h
-                idx = int(self.frame) % frames
-                x_offset = idx * fw
-                img.clip_draw(x_offset, 0, fw, fh, x, y)
-            else:
-                # vertical layout per-state image
-                fh = max(1, img.h // frames)
-                fw = img.w
-                idx = int(self.frame) % frames
-                top = idx * fh
-                img.clip_draw(0, top, fw, fh, x, y)
+
+        img = self.images.get(self.state)
+        if not img:
+            return
+        if self.layout == 'horizontal':
+            fw = max(1, img.w // frames)
+            fh = img.h
+            idx = int(self.frame) % frames
+            x_offset = idx * fw
+            img.clip_draw(x_offset, 0, fw, fh, x, y)
         else:
-            # 이미지 없을 때는 그려지지 않음
-            pass
+            fh = max(1, img.h // frames)
+            fw = img.w
+            idx = int(self.frame) % frames
+            top = idx * fh
+            img.clip_draw(0, top, fw, fh, x, y)
 
     def current_frame_index(self):
         return int(self.frame)
 
     def get_world_hit_bbox(self, state, frame_idx, cx, cy):
-        """Return world-space bbox for given state/frame index based on precomputed frame bbox.
-        Returns (lx,by,rx,ty) or None if no bbox.
-        """
-        # support both per-state images and single-sheet
+        # support single-sheet and per-state images
         if self.sheet_image is not None:
             sheet = self.sheet_image
-            total_frames = sum(self.frames_map.get(s, 1) for s in ('idle', 'attack', 'damaged', 'death'))
+            total_frames = sum(int(self.frames_map.get(s, 1)) for s in ('idle', 'attack', 'damaged', 'death'))
             fw = getattr(sheet, 'w', 1)
-            fh = getattr(sheet, 'h', 1) // total_frames if total_frames>0 else getattr(sheet,'h',1)
-            # find global frame index
+            fh = max(1, getattr(sheet, 'h', 1) // total_frames)
             start, cnt = self.sheet_state_offsets.get(state, (0, 1))
             if frame_idx < 0 or frame_idx >= cnt:
                 return None
             bboxes = self.frame_bboxes.get(state, [])
             if not bboxes:
-                minx, miny, maxx, maxy = 0,0,fw,fh
+                minx, miny, maxx, maxy = 0, 0, fw, fh
             else:
                 minx, miny, maxx, maxy = bboxes[frame_idx]
                 if minx == maxx == 0 and miny == maxy == 0:
@@ -233,29 +238,22 @@ class Animator:
             return (world_left, world_bottom, world_right, world_top)
 
         img = self.images.get(state)
-        frames = self.frames_map.get(state, 1)
         if img is None:
             return None
+        frames = int(self.frames_map.get(state, 1))
         if self.layout == 'horizontal':
             fw = max(1, img.w // frames)
             fh = img.h
-            bboxes = self.frame_bboxes.get(state, [])
-            if not bboxes or frame_idx < 0 or frame_idx >= len(bboxes):
-                minx, miny, maxx, maxy = 0, 0, fw, fh
-            else:
-                minx, miny, maxx, maxy = bboxes[frame_idx]
-                if minx == maxx == 0 and miny == maxy == 0:
-                    return None
         else:
             fh = max(1, img.h // frames)
             fw = img.w
-            bboxes = self.frame_bboxes.get(state, [])
-            if not bboxes or frame_idx < 0 or frame_idx >= len(bboxes):
-                minx, miny, maxx, maxy = 0, 0, fw, fh
-            else:
-                minx, miny, maxx, maxy = bboxes[frame_idx]
-                if minx == maxx == 0 and miny == maxy == 0:
-                    return None
+        bboxes = self.frame_bboxes.get(state, [])
+        if not bboxes or frame_idx < 0 or frame_idx >= len(bboxes):
+            minx, miny, maxx, maxy = 0, 0, fw, fh
+        else:
+            minx, miny, maxx, maxy = bboxes[frame_idx]
+            if minx == maxx == 0 and miny == maxy == 0:
+                return None
         world_left = cx - fw / 2 + minx
         world_bottom = cy - fh / 2 + miny
         world_right = cx - fw / 2 + maxx
@@ -423,6 +421,15 @@ class Monster:
 
     def draw(self):
         self.animator.draw(self.x, self.y)
+        # Debug marker: if sheet rendering fails or for quick visibility during testing,
+        # draw a small rectangle for eyeball monsters when debugging is enabled.
+        if DEBUG_MONSTER and getattr(self, 'name', '') == 'eyeball':
+            try:
+                from pico2d import draw_rectangle
+                s = 8
+                draw_rectangle(self.x - s/2, self.y - s/2, self.x + s/2, self.y + s/2)
+            except Exception:
+                pass
 
     def take_damage(self, dmg):
         if not self.alive:
@@ -478,9 +485,10 @@ class EyeBall(Monster):
         except Exception:
             sheet = None
             total_h = 0
-        # tentatively set frames counts
+            total_w = 0
+        # tentatively set frames counts per user's layout
         idle_count = 10
-        attack_count = 15
+        attack_count = 25
         damaged_count = 3
         # death = remaining
         death_count = 0
@@ -538,6 +546,15 @@ class EyeBall(Monster):
     # override draw to make sure eye uses animator loaded from sheet
     def draw(self):
         self.animator.draw(self.x, self.y)
+        # Debug marker: if sheet rendering fails or for quick visibility during testing,
+        # draw a small rectangle for eyeball monsters when debugging is enabled.
+        if DEBUG_MONSTER and getattr(self, 'name', '') == 'eyeball':
+            try:
+                from pico2d import draw_rectangle
+                s = 8
+                draw_rectangle(self.x - s/2, self.y - s/2, self.x + s/2, self.y + s/2)
+            except Exception:
+                pass
 
 
 # EOF
