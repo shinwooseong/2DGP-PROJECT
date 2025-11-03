@@ -2,7 +2,7 @@ from pico2d import load_image
 import time
 import math
 
-# 디버그 출력 끄기
+# 디버그 출력 기본값
 DEBUG_MONSTER = False
 
 
@@ -13,7 +13,7 @@ class Animator:
       - grid: states are rows (frames_map order), each row has given columns
     Computes per-frame bboxes using PIL when available.
     """
-    def __init__(self, folder, frames_map, frame_time, layout='horizontal', single_image_path=None):
+    def __init__(self, folder, frames_map, frame_time, layout='horizontal', single_image_path=None, single_frame_height=None):
         self.folder = folder
         self.frames_map = dict(frames_map)
         self.frame_time_map = dict(frame_time)
@@ -66,36 +66,105 @@ class Animator:
                     self._sheet_grid_mode = True
                     self._grid_info = {'fw': fw, 'fh': fh, 'rows': num_rows, 'cols': max_cols}
                 else:
-                    # vertical stacked frames (states order idle,attack,damaged,death)
-                    total_frames = max(1, sum(int(self.frames_map.get(s, 1)) for s in self.frames_map))
+                    # vertical stacked frames: try to detect precise frame height using PIL+numpy
                     fw = getattr(sheet, 'w', 1)
-                    fh = max(1, int(getattr(sheet, 'h', 1) // total_frames))
+                    H = getattr(sheet, 'h', 1)
+                    # default total frames from frames_map sum
+                    expected_total = max(1, sum(int(v) for v in self.frames_map.values()))
+                    frame_h = None
+                    pil = None
                     try:
                         from PIL import Image
+                        import numpy as np
                         pil = Image.open(single_image_path).convert('RGBA')
+                        arr = np.array(pil)
+                        alpha = arr[:, :, 3]
+                        rows = np.where(alpha.any(axis=1))[0]
+                        if len(rows) > 0:
+                            # collect start rows of visible blocks
+                            starts = []
+                            prev = None
+                            for r in rows:
+                                if prev is None or r != prev + 1:
+                                    starts.append(r)
+                                prev = r
+                            if len(starts) > 1:
+                                dists = [starts[i+1] - starts[i] for i in range(len(starts)-1)]
+                                # filter out tiny distances (noise like single-pixel artifacts)
+                                dists_filtered = [int(d) for d in dists if int(d) > 5]
+                                if dists_filtered:
+                                    try:
+                                        from statistics import mode
+                                        frame_h = int(mode(dists_filtered))
+                                    except Exception:
+                                        # fallback to median-like selection
+                                        dists_filtered.sort()
+                                        frame_h = int(dists_filtered[len(dists_filtered)//2])
+                                else:
+                                    # no large gaps found -> fall back to min of raw dists
+                                    frame_h = int(max(1, min(dists)))
+                            else:
+                                # single block: estimate by contiguous segment length
+                                segs = []
+                                prev = rows[0]
+                                seg_start = prev
+                                for r in rows[1:]:
+                                    if r == prev + 1:
+                                        prev = r
+                                    else:
+                                        segs.append(prev - seg_start + 1)
+                                        seg_start = r
+                                        prev = r
+                                segs.append(prev - seg_start + 1)
+                                frame_h = int(segs[0]) if segs else max(1, H // expected_total)
+                        # debug output to help diagnose incorrect frame height detection
+                        if DEBUG_MONSTER:
+                            try:
+                                print(f"Animator vertical-detect: file={single_image_path} H={H} expected_total={expected_total}")
+                                print(f"  rows_count={len(rows)} starts={starts[:10]}{'...' if len(starts)>10 else ''}")
+                                if 'dists' in locals():
+                                    print(f"  dists sample={dists[:10]}{'...' if len(dists)>10 else ''} -> frame_h(candidate)={frame_h}")
+                                else:
+                                    print(f"  single-block segs sample, chosen frame_h={frame_h}")
+                            except Exception:
+                                pass
                     except Exception:
                         pil = None
+                    forced_fh = int(single_frame_height) if single_frame_height is not None else None
+                    if forced_fh is not None and forced_fh > 0:
+                        frame_h = forced_fh
+                    elif not frame_h or frame_h <= 0:
+                        # fallback to equal division
+                        frame_h = max(1, int(H // expected_total))
+                    # remember computed/forced frame height
+                    self._sheet_frame_h = int(frame_h)
+                    total_frames = max(1, int(H // frame_h))
+                    # if detected total smaller than expected, force equal division
+                    if total_frames < expected_total:
+                        frame_h = max(1, int(H // expected_total))
+                        total_frames = expected_total
+                    # build bboxes per state using ordered frames_map keys
                     idx = 0
-                    for state in ('idle', 'attack', 'damaged', 'death'):
-                        fcount = int(self.frames_map.get(state, 1))
+                    for state, fcount in list(self.frames_map.items()):
+                        fcount = int(fcount)
                         self.sheet_state_offsets[state] = (idx, fcount)
                         bboxes = []
                         for i in range(fcount):
                             if pil is not None:
-                                top = (idx + i) * fh
-                                frame_img = pil.crop((0, top, fw, top + fh))
+                                top = (idx + i) * frame_h
+                                frame_img = pil.crop((0, top, fw, top + frame_h))
                                 bbox = frame_img.getbbox()
                                 if bbox is None:
-                                    bboxes.append((0, 0, fw, fh))
+                                    bboxes.append((0, 0, fw, frame_h))
                                 else:
                                     l, u, r, d = bbox
                                     bl = l
-                                    bb = fh - d
+                                    bb = frame_h - d
                                     br = r
-                                    bt = fh - u
+                                    bt = frame_h - u
                                     bboxes.append((bl, bb, br, bt))
                             else:
-                                bboxes.append((0, 0, fw, fh))
+                                bboxes.append((0, 0, fw, frame_h))
                         self.frame_bboxes[state] = bboxes
                         idx += fcount
                     self._sheet_grid_mode = False
@@ -224,8 +293,8 @@ class Animator:
                 fw = getattr(sheet, 'w', 1)
                 start, cnt = self.sheet_state_offsets.get(self.state, (0, 1))
                 idx = start + (int(self.frame) % cnt)
-                total_frames = sum(int(self.frames_map.get(s, 1)) for s in self.frames_map)
-                fh = max(1, int(getattr(sheet, 'h', 1) // total_frames))
+                # use computed/forced frame height if available
+                fh = int(getattr(self, '_sheet_frame_h', max(1, int(getattr(sheet, 'h', 1) // max(1, sum(int(v) for v in self.frames_map.values()))))))
                 bottom = max(0, getattr(sheet, 'h', 1) - (idx + 1) * fh)
                 dw = int(fw * scale)
                 dh = int(fh * scale)
@@ -290,10 +359,9 @@ class Animator:
                 world_top = cy - fh_s / 2 + maxy * scale
                 return (world_left, world_bottom, world_right, world_top)
 
-            # vertical stacked fallback
-            total_frames = sum(int(self.frames_map.get(s, 1)) for s in self.frames_map)
+            # vertical stacked fallback: use computed/forced frame height when available
             fw = getattr(sheet, 'w', 1)
-            fh = max(1, int(getattr(sheet, 'h', 1) // total_frames))
+            fh = int(getattr(self, '_sheet_frame_h', max(1, int(getattr(sheet, 'h', 1) // max(1, sum(int(v) for v in self.frames_map.values()))))))
             start, cnt = self.sheet_state_offsets.get(state, (0, 1))
             if frame_idx < 0 or frame_idx >= cnt:
                 return None
@@ -507,12 +575,46 @@ class EyeBall(Monster):
     def __init__(self, x=400, y=400):
         super().__init__(name='eyeball', x=x, y=y, hp=60, speed=20)
         sheet_path = 'MS/EyeBall Monster-Sheet.png'
-        idle_count = 10
-        attack_count = 17
-        damaged_count = 2
-        frames_map = {'idle': idle_count, 'attack': attack_count, 'damaged': damaged_count, 'death': 5}
+        # known layout from user: top 10 idle, next 17 attack, next 2 damaged, rest death
+        idle_count = 14
+        attack_count = 26
+        damaged_count = 11
         frame_time = {'idle': 0.12, 'attack': 0.08, 'damaged': 0.09, 'death': 0.12}
-        self.animator = Animator('', frames_map, frame_time, layout='vertical', single_image_path=sheet_path)
+        # try to compute total_frames by dividing image height H by a candidate total >= known
+        frames_map = {'idle': idle_count, 'attack': attack_count, 'damaged': damaged_count, 'death': 5}
+        try:
+            from PIL import Image
+            pil = Image.open(sheet_path)
+            W, H = pil.size
+            known = idle_count + attack_count + damaged_count
+            chosen_total = None
+            # try to find a divisor total_frames so that frame_h = H // total_frames is integer and reasonable
+            for total in range(known + 1, known + 61):
+                if H % total == 0:
+                    fh = H // total
+                    if 6 <= fh <= 300:
+                        chosen_total = total
+                        break
+            if chosen_total is None:
+                # fallback: try small frame heights (scan possible frame_h candidates)
+                for fh in range(6, 201):
+                    if H % fh == 0:
+                        total = H // fh
+                        if total >= known + 1:
+                            chosen_total = total
+                            break
+            if chosen_total is None:
+                # give up and use heuristic detection by Animator (default)
+                frames_map['death'] = 5
+            else:
+                death_count = max(1, chosen_total - known)
+                frames_map = {'idle': idle_count, 'attack': attack_count, 'damaged': damaged_count, 'death': death_count}
+        except Exception:
+            # PIL not available or failed -> keep fallback
+            frames_map = {'idle': idle_count, 'attack': attack_count, 'damaged': damaged_count, 'death': 5}
+
+        # Force frame height to 48 based on image analysis (prevents double-sprite slicing)
+        self.animator = Animator('', frames_map, frame_time, layout='vertical', single_image_path=sheet_path, single_frame_height=48)
         self.combat = Combat(attack_power=12, attack_range=40, cooldown=0.6, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=300)
         self.state = self.animator.state
