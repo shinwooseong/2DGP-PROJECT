@@ -1,3 +1,4 @@
+# state_machine.py
 class StateMachine:
     def __init__(self,start_state,transitions):
         self.next_state = None
@@ -5,8 +6,8 @@ class StateMachine:
         self.transitions = transitions
         self.cur_state.enter(None)
 
-    def update(self):
-        self.cur_state.do()
+    def update(self, dt): # dt 인자 추가
+        self.cur_state.do(dt) # dt를 do()로 전달
 
     def draw(self):
         self.cur_state.draw()
