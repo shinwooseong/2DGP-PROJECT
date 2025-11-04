@@ -4,6 +4,8 @@ from pico2d import load_image
 
 SCREEN_W, SCREEN_H = 1000, 1000
 
+# hp 창, 돈 표시, 미니맵, 목표, 무기변환 등 요소 구현하기.
+
 class UI:
     def __init__(self):
         pass

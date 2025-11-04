@@ -13,7 +13,7 @@ class Inventory:
     def load_backpack_image(self):
         # 배낭 이미지 로드
         try:
-            self.backpack_image = load_image('backpack_in.png')
+            self.backpack_image = load_image('UI/backpack_in.png')
         except Exception as e:
             print(f"배낭 이미지 로드 오류: {e}")
             self.backpack_image = None

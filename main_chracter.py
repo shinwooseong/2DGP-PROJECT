@@ -9,9 +9,9 @@ SPRITE_W, SPRITE_H = 96, 80  # 실제 이미지 크기: 768x80 = 8프레임 × 9
 
 # 이동 속도(px/sec)
 WALK_SPEED = 140.0
-ROLL_SPEED = 420.0
+ROLL_SPEED = 360.0
 # 구르기 총 이동 거리(픽셀)
-ROLL_DISTANCE = 160.0
+ROLL_DISTANCE = 80.0
 
 
 class Idle:
