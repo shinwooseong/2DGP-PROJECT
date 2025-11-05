@@ -9,16 +9,20 @@ import inventory
 import main_chracter
 from Monster import Green_MS, EyeBall, Trash_Monster, Red_MS
 
+# UI import (simple direct import)
+from or_character.IDLE.UI import UI
+
 # 디버그 설정
 DEBUG_MONSTERS = True
 _last_hp = None
 
 player = None
 monsters = []
+ui = None
 
 
 def init():
-    global player, monsters, _last_hp
+    global player, monsters, _last_hp, ui
 
     player = main_chracter.Main_character()
     game_world.add_object(player, 1)  # layer 1
@@ -34,6 +38,14 @@ def init():
 
     _last_hp = None
 
+    # UI 생성 및 등록 (layer 2)
+    if UI is not None:
+        try:
+            ui = UI()
+            game_world.add_object(ui, 2)
+        except Exception:
+            ui = None
+
     if DEBUG_MONSTERS:
         print("Monsters summary (play_mode init):")
         for i, m in enumerate(monsters):
@@ -48,6 +60,15 @@ def init():
 
 
 def finish():
+    global ui
+    # UI 제거
+    if ui is not None:
+        try:
+            game_world.remove_object(ui)
+        except Exception:
+            pass
+        ui = None
+
     game_world.clear()  # game_world의 모든 객체 삭제
 
 
@@ -68,6 +89,13 @@ def handle_events():
 def update(dt):
     # 플레이어 업데이트
     player.update(dt)
+
+    # UI 동기화 (player.money가 없으면 0 사용)
+    if ui is not None:
+        try:
+            ui.set_money(getattr(player, 'money', 0))
+        except Exception:
+            pass
 
     for m in monsters:
         # play_mode가 실행 중이라는 것은 인벤토리가 닫힌 상태
