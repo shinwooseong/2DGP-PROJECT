@@ -1,36 +1,62 @@
-from pico2d import load_image
-from sdl2 import SDL_KEYDOWN, SDLK_u
+from pico2d import *
+from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u
 
-SCREEN_W, SCREEN_H = 1000, 1000
+import game_framework
+import game_world  # play_mode의 월드를 그리기 위해 임포트
+
+# 스크린 크기는 main_chracter에서 가져옴
+import main_chracter
+
+SCREEN_W, SCREEN_H = main_chracter.SCREEN_W, main_chracter.SCREEN_H
+
+backpack_image = None
 
 
-class Inventory:
-    def __init__(self):
-        self.is_open = False
-        self.backpack_image = None
-        self.load_backpack_image()
+def init():
+    global backpack_image
+    try:
+        backpack_image = load_image('UI/backpack_in.png')
+    except Exception as e:
+        print(f"배낭 이미지 로드 오류: {e}")
+        backpack_image = None
 
-    def load_backpack_image(self):
-        # 배낭 이미지 로드
-        try:
-            self.backpack_image = load_image('UI/backpack_in.png')
-        except Exception as e:
-            print(f"배낭 이미지 로드 오류: {e}")
-            self.backpack_image = None
 
-    def toggle(self):
-        # 배낭 열고 닫기
-        self.is_open = not self.is_open
+def finish():
+    global backpack_image
+    del backpack_image
 
-    def handle_event(self, event):
-        # 이벤트 처리
-        if event.type == SDL_KEYDOWN and event.key == SDLK_u:
-            self.toggle()
 
-    def draw(self):
-        # 배낭 UI 그리기
-        if self.is_open and self.backpack_image:
-            center_x = SCREEN_W // 2
-            center_y = SCREEN_H // 2
-            self.backpack_image.draw(center_x, center_y)
+def handle_events():
+    events = get_events()
+    for event in events:
+        if event.type == SDL_KEYDOWN:
+            if event.key == SDLK_u or event.key == SDLK_ESCAPE:
+                # U 또는 ESC 키로 인벤토리를 닫음 (pop)
+                game_framework.pop_mode()
 
+
+def update(dt):
+    pass  # 인벤토리는 정적이므로 업데이트할 내용 없음
+
+
+def draw():
+    # LEC11 (page 43) [cite: 553] 처럼, item_mode는
+    # 뒤의 game_world를 먼저 그리고 그 위에 UI를 그립니다.
+    clear_canvas()
+    game_world.render()  # play_mode의 객체들을 그대로 그림
+
+    # 그 위에 배낭 UI 그리기
+    if backpack_image:
+        center_x = SCREEN_W // 2
+        center_y = SCREEN_H // 2
+        backpack_image.draw(center_x, center_y)
+
+    update_canvas()
+
+
+def pause():
+    pass
+
+
+def resume():
+    pass
