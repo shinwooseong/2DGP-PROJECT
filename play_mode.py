@@ -1,6 +1,6 @@
 # play_mode.py
 from pico2d import *
-from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE, SDLK_u
+from sdl2 import SDL_KEYDOWN, SDL_KEYUP, SDL_QUIT, SDLK_ESCAPE, SDLK_u
 
 import game_framework
 import game_world
@@ -84,7 +84,17 @@ def handle_events():
             elif event.key == SDLK_u:
                 game_framework.push_mode(inventory)
             else:
+                # pass KEYDOWN to player
+                try:
+                    player.handle_event(event)
+                except Exception:
+                    pass
+        elif event.type == SDL_KEYUP:
+            # pass KEYUP to player so key_map resets
+            try:
                 player.handle_event(event)
+            except Exception:
+                pass
 
 
 def update(dt):
