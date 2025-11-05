@@ -5,12 +5,13 @@ from sdl2 import SDL_KEYDOWN, SDL_QUIT, SDLK_ESCAPE, SDLK_u
 import game_framework
 import game_world
 import inventory
+import title_mode
 
 import main_chracter
 from Monster import Green_MS, EyeBall, Trash_Monster, Red_MS
 
 # UI import (simple direct import)
-from or_character.IDLE.UI import UI
+from UI import UI
 
 # 디버그 설정
 DEBUG_MONSTERS = True
@@ -77,13 +78,13 @@ def handle_events():
     for event in events:
         if event.type == SDL_QUIT:
             game_framework.quit()
-        elif event.type == SDL_KEYDOWN and event.key == SDLK_ESCAPE:
-            game_framework.quit()
-        elif event.type == SDL_KEYDOWN and event.key == SDLK_u:
-            # U 키를 누르면 inventory를 'push'
-            game_framework.push_mode(inventory)
-        else:
-            player.handle_event(event)
+        elif event.type == SDL_KEYDOWN:
+            if event.key == SDLK_ESCAPE:
+                game_framework.change_mode(title_mode)
+            elif event.key == SDLK_u:
+                game_framework.push_mode(inventory)
+            else:
+                player.handle_event(event)
 
 
 def update(dt):
