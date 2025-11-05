@@ -1,3 +1,4 @@
+# main_chracter.py
 import time
 from pico2d import load_image
 from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE
@@ -25,11 +26,11 @@ class Idle:
     def exit(self, e):
         pass
 
-    def do(self):
+    def do(self, dt): # dt 인자 추가
         # 시간 기반 프레임 진행
         frames = self.character.idle_frames[self.character.dir]
 
-        self.character.frame_time_acc += self.character.dt
+        self.character.frame_time_acc += dt # self.character.dt 대신 dt 사용
         frame_time = 0.1  # idle 프레임 시간
         while self.character.frame_time_acc >= frame_time:
             self.character.frame_time_acc -= frame_time
@@ -66,11 +67,11 @@ class Walk:
     def exit(self, e):
         pass
 
-    def do(self):
+    def do(self, dt): # dt 인자 추가
         # 시간 기반 프레임 증가
         frames = self.character.run_frames[self.character.dir]
 
-        self.character.frame_time_acc += self.character.dt
+        self.character.frame_time_acc += dt # self.character.dt 대신 dt 사용
         frame_time = 0.08  # run 프레임 시간 (walk보다 약간 빠름)
         while self.character.frame_time_acc >= frame_time:
             self.character.frame_time_acc -= frame_time
@@ -81,13 +82,13 @@ class Walk:
         dy = 0.0
         speed = WALK_SPEED
         if self.character.key_map['UP']:
-            dy += speed * self.character.dt
+            dy += speed * dt # self.character.dt 대신 dt 사용
         if self.character.key_map['DOWN']:
-            dy -= speed * self.character.dt
+            dy -= speed * dt # self.character.dt 대신 dt 사용
         if self.character.key_map['LEFT']:
-            dx -= speed * self.character.dt
+            dx -= speed * dt # self.character.dt 대신 dt 사용
         if self.character.key_map['RIGHT']:
-            dx += speed * self.character.dt
+            dx += speed * dt # self.character.dt 대신 dt 사용
 
         if dx == 0.0 and dy == 0.0:
             self.character.state_machine.handle_state_event(('STOP', None))
@@ -124,7 +125,7 @@ class Roll:
     def exit(self, e):
         pass
 
-    def do(self):
+    def do(self, dt): # dt 인자 추가
         # 구르기 중에도 방향 키 입력을 받아서 방향 업데이트
         if self.character.key_map['UP']:
             self.character.dir = 'UP'
@@ -138,7 +139,7 @@ class Roll:
         frames = self.character.run_frames[self.character.dir]
 
         # 시간 기반 프레임 진행 (마지막 프레임에서 STOP)
-        self.character.frame_time_acc += self.character.dt
+        self.character.frame_time_acc += dt # self.character.dt 대신 dt 사용
         frame_time = 0.06  # roll은 더 빠르게
         while self.character.frame_time_acc >= frame_time:
             self.character.frame_time_acc -= frame_time
@@ -152,7 +153,7 @@ class Roll:
         # 구르기 이동
         remaining = max(0.0, ROLL_DISTANCE - getattr(self.character, 'roll_moved', 0.0))
         if remaining > 0.0:
-            move = min(ROLL_SPEED * self.character.dt, remaining)
+            move = min(ROLL_SPEED * dt, remaining)
             if self.character.dir == 'UP':
                 self.character.y = min(SCREEN_H - SPRITE_H // 2, self.character.y + move)
             elif self.character.dir == 'DOWN':
@@ -184,8 +185,6 @@ class Attack:
         self.stage = 1
         self.frame = 0
         self.frame_time_acc = 0.0
-        self.start_time = 0.0
-        self._last_time = 0.0
         self.animation_ended = False  # 애니메이션 완료 플래그
         self._hit_done = False
 
@@ -194,8 +193,6 @@ class Attack:
         self.character.frame = 0
         self.frame = 0
         self.frame_time_acc = 0.0
-        self.start_time = time.time()
-        self._last_time = self.start_time
         self.animation_ended = False  # 플래그 초기화
         self.character.next_attack_request = False
         self._hit_done = False
@@ -205,31 +202,28 @@ class Attack:
     def exit(self, e):
         pass
 
-    def do(self):
+    def do(self, dt): # dt 인자 추가
         frames = self.character.attack_frames[self.stage][self.character.dir]
         frame_time = 0.07 if self.stage == 1 else 0.06
 
         # 히트 프레임: 애니의 중간 프레임
         hit_frame = max(0, frames // 2)
 
-        now = time.time()
-        elapsed = now - self._last_time
-        elapsed = min(elapsed, 0.1)
-        self.frame_time_acc += elapsed
-        self._last_time = now
+        # time.time() 대신 dt 사용
+        self.frame_time_acc += dt
 
         # 공격 중에도 이동 가능 (공격 방향은 유지하되, 이동은 허용)
         dx = 0.0
         dy = 0.0
         move_speed = 70.0  # 공격 중 이동 속도 (일반 이동보다 느림)
         if self.character.key_map['UP']:
-            dy += move_speed * elapsed
+            dy += move_speed * dt
         if self.character.key_map['DOWN']:
-            dy -= move_speed * elapsed
+            dy -= move_speed * dt
         if self.character.key_map['LEFT']:
-            dx -= move_speed * elapsed
+            dx -= move_speed * dt
         if self.character.key_map['RIGHT']:
-            dx += move_speed * elapsed
+            dx += move_speed * dt
 
         # 이동 적용 및 화면 경계
         if dx != 0.0 or dy != 0.0:
@@ -265,7 +259,7 @@ class Attack:
                     continue
                 else:
                     # 공격 종료 - 1초 내 재입력 대기
-                    self.character.last_attack_end_time = time.time()
+                    self.character.last_attack_end_time = time.time() # 콤보 타이밍은 time.time() 유지
                     self.character.next_attack_request = False
                     self._hit_done = False
                     self.character.attack_hit_pending = False
@@ -298,8 +292,8 @@ class Main_character:
         self.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
         # 시간 관련
-        self.prev_time = time.time()
-        self.dt = 0.0
+        # self.prev_time = time.time() # game_framework에서 dt를 받으므로 삭제
+        # self.dt = 0.0 # 삭제
         self.frame_time_acc = 0.0
         self.roll_moved = 0.0
 
@@ -351,7 +345,7 @@ class Main_character:
 
             # IDLE
             for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                img_path = f'IDLE/idle_{direction.lower()}.png'
+                img_path = f'or_character/IDLE/idle_{direction.lower()}.png' # 경로 수정
                 pil_img = Image.open(img_path).convert('RGBA')
                 arr = np.array(pil_img)
                 alpha = arr[:, :, 3]
@@ -360,7 +354,7 @@ class Main_character:
 
             # RUN
             for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                img_path = f'RUN/run_{direction.lower()}.png'
+                img_path = f'or_character/RUN/run_{direction.lower()}.png' # 경로 수정
                 pil_img = Image.open(img_path).convert('RGBA')
                 arr = np.array(pil_img)
                 alpha = arr[:, :, 3]
@@ -370,7 +364,7 @@ class Main_character:
             # ATTACK (stage 1, 2)
             for stage in (1, 2):
                 for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                    img_path = f'ATTACK {stage}/attack_{direction.lower()}.png'
+                    img_path = f'or_character/ATTACK {stage}/attack{stage}_{direction.lower()}.png' # 경로 수정
                     pil_img = Image.open(img_path).convert('RGBA')
                     arr = np.array(pil_img)
                     alpha = arr[:, :, 3]
@@ -379,7 +373,7 @@ class Main_character:
                         rows_with_pixels) > 0 else 0
 
         except Exception as e:
-            print(f"Y offset 계산 오류: {e}")
+            print(f"Y offset 계산 오류 (파일 경로 'or_character/...' 확인): {e}")
             for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
                 self.idle_y_offsets[direction] = 0
                 self.run_y_offsets[direction] = 0
@@ -417,7 +411,7 @@ class Main_character:
                 },
                 self.ROLL: {
                     'STOP': lambda e: self.IDLE,
-                    'ATTACK': lambda e: self.ATTACK
+                    'ATTACK': lambda e: self.ATTACK # 구르기 중 공격 가능하도록 유지
                 },
                 self.ATTACK: {
                     'STOP': lambda e: self.IDLE
@@ -425,11 +419,9 @@ class Main_character:
             }
         )
 
-    def update(self):
-        now = time.time()
-        self.dt = now - self.prev_time
-        self.prev_time = now
-        self.state_machine.update()
+    def update(self, dt): # dt 인자 추가
+        # dt 계산 로직 삭제 (game_framework가 대신 함)
+        self.state_machine.update(dt) # dt를 state_machine으로 전달
 
     def draw(self):
         self.state_machine.draw()
