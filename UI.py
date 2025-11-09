@@ -44,9 +44,9 @@ class UI:
             self.transform_img = None
 
         # 레이아웃 관련
-        self.margin = 16
-        self.hp_bar_width = 220
-        self.hp_bar_height = 40
+        self.margin = 8
+        self.hp_bar_width = 180
+        self.hp_bar_height = 35
         # HP 바 이미지를 부분별로 로드
         try:
             self.hp_part_left = load_image('UI/hp_image/1.png')
@@ -60,6 +60,11 @@ class UI:
             self.hp_part_right = load_image('UI/hp_image/3.png')
         except Exception:
             self.hp_part_right = None
+        try:
+            # 추가 데코 이미지(앞에 표시할 13.png)
+            self.hp_decor = load_image('UI/hp_image/13.png')
+        except Exception:
+            self.hp_decor = None
 
     def set_player(self, player):
         self.player = player
@@ -110,10 +115,13 @@ class UI:
         coin_y = top - 24
 
         # HP 바: 코인보다 오른쪽에 위치시키되, HP를 먼저 그리도록 함
-        hp_x = coin_x + icon_w
-        hp_y = coin_y
+        hp_x = coin_x + icon_w + 60
+        # 정렬 정확도를 위해 정수 중심 좌표 사용
+        hp_y = int(coin_y)
         bar_w = self.hp_bar_width
         bar_h = self.hp_bar_height
+        # 모든 HP 관련 이미지는 동일한 출력 높이(draw_h)를 사용하도록 고정
+        draw_h = int(bar_h)
 
         # --- HP 그리기 (먼저) ---
         try:
@@ -125,25 +133,43 @@ class UI:
                 max_hp = 100
             ratio = float(hp) / float(max_hp) if max_hp > 0 else 0.0
 
+            # 앞에 표시할 데코(13.png)를 그린다: HP 바의 왼쪽에 배치
+            if self.hp_decor is not None:
+                try:
+                    # 데코는 HP 바의 높이에 정확히 맞춥니다 (Y축 크기 = draw_h)
+                    orig_w = float(getattr(self.hp_decor, 'w', draw_h))
+                    orig_h = float(getattr(self.hp_decor, 'h', draw_h)) if getattr(self.hp_decor, 'h', 0) else float(draw_h)
+                    # 원본 종횡비 유지하여 너비 계산
+                    draw_w = int(orig_w * (float(draw_h) / float(orig_h))) if orig_h > 0 else int(draw_h)
+                    # HP 바의 왼쪽 좌표
+                    x_left = float(hp_x) - float(bar_w) / 2.0
+                    # 데코의 중심 x는 (왼쪽 엣지) - (데코 폭/2)
+                    overlap = 8
+                    draw_x = int(x_left - (draw_w / 2.0) + overlap)
+                    # Y축 크기를 draw_h로 명확히 지정
+                    self.hp_decor.draw(draw_x, hp_y, draw_w, draw_h)
+                except Exception:
+                    pass
+
             # Compose HP bar from three images (left, mid, right) if available
             if self.hp_part_left is not None and self.hp_part_mid is not None and self.hp_part_right is not None:
                 try:
-                    lw = getattr(self.hp_part_left, 'w', int(bar_h))
-                    rw = getattr(self.hp_part_right, 'w', int(bar_h))
+                    lw = getattr(self.hp_part_left, 'w', draw_h)
+                    rw = getattr(self.hp_part_right, 'w', draw_h)
                     mid_total = max(0, bar_w - lw - rw)
-                    # background
-                    self.hp_part_left.draw(hp_x - bar_w//2 + lw//2, hp_y, lw, bar_h)
+                    # background (use draw_h for consistent height)
+                    self.hp_part_left.draw(hp_x - bar_w//2 + lw//2, hp_y, lw, draw_h)
                     if mid_total > 0:
                         try:
-                            self.hp_part_mid.draw(hp_x - bar_w//2 + lw + mid_total//2, hp_y, mid_total, bar_h)
+                            self.hp_part_mid.draw(hp_x - bar_w//2 + lw + mid_total//2, hp_y, mid_total, draw_h)
                         except Exception:
                             self.hp_part_mid.draw(hp_x, hp_y)
-                    self.hp_part_right.draw(hp_x + bar_w//2 - rw//2, hp_y, rw, bar_h)
+                    self.hp_part_right.draw(hp_x + bar_w//2 - rw//2, hp_y, rw, draw_h)
                     # filled mid
                     filled_mid = int(mid_total * ratio)
                     if filled_mid > 0:
                         try:
-                            self.hp_part_mid.draw(hp_x - bar_w//2 + lw + filled_mid//2, hp_y, filled_mid, bar_h)
+                            self.hp_part_mid.draw(hp_x - bar_w//2 + lw + filled_mid//2, hp_y, filled_mid, draw_h)
                         except Exception:
                             pass
                 except Exception:
@@ -155,8 +181,8 @@ class UI:
                 try:
                     filled_w = int(bar_w * ratio)
                     if filled_w > 0:
-                        draw_rectangle(hp_x - bar_w//2, hp_y - bar_h//2, hp_x - bar_w//2 + filled_w, hp_y + bar_h//2)
-                    draw_rectangle(hp_x - bar_w//2, hp_y - bar_h//2, hp_x + bar_w//2, hp_y + bar_h//2)
+                        draw_rectangle(hp_x - bar_w//2, hp_y - draw_h//2, hp_x - bar_w//2 + filled_w, hp_y + draw_h//2)
+                    draw_rectangle(hp_x - bar_w//2, hp_y - draw_h//2, hp_x + bar_w//2, hp_y + draw_h//2)
                 except Exception:
                     pass
 
