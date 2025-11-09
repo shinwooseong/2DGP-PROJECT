@@ -23,9 +23,13 @@ class UI:
 
         # 이미지 플래이스홀더들
         try:
-            self.coin_img = load_image('Maid Idle.png')
+            # 변경: 좌측 상단 코인 이미지는 UI 폴더의 have_money.png 사용
+            self.coin_img = load_image('UI/have_money.png')
         except Exception:
-            self.coin_img = None
+            try:
+                self.coin_img = load_image('Maid Idle.png')
+            except Exception:
+                self.coin_img = None
         try:
             self.potion_img = load_image('Maid Run.png')
         except Exception:
@@ -86,20 +90,36 @@ class UI:
         left = self.margin
         top = SCREEN_H - self.margin
 
-        # 코인 이미지 그리기 (아이콘)
+        # 코인 이미지 그리기 (아이콘) - 플레이어보다 살짝 크게 표시
         coin_x = left + 24
         coin_y = top - 24
+        # 플레이어 스프라이트 크기를 참고해 아이콘 크기 결정
+        try:
+            import main_chracter
+            base_w = getattr(main_chracter, 'SPRITE_W', 96)
+            base_h = getattr(main_chracter, 'SPRITE_H', 80)
+        except Exception:
+            base_w, base_h = 96, 80
+        icon_scale = 1.12  # 플레이어보다 12% 크게
+        icon_w = int(base_w * icon_scale)
+        icon_h = int(base_h * icon_scale)
         if self.coin_img:
             try:
-                self.coin_img.draw(coin_x, coin_y)
+                self.coin_img.draw(coin_x, coin_y, icon_w, icon_h)
             except Exception:
-                pass
+                try:
+                    self.coin_img.draw(coin_x, coin_y)
+                except Exception:
+                    pass
 
-        # 금액 텍스트: 코인 이미지 아래
+        # 금액 텍스트: 코인 이미지 아래 (아이콘 크기에 맞춰 위치 조정)
         amount_text = f"{self.money}"
         if self.font:
             try:
-                self.font.draw(coin_x - 8, coin_y - (getattr(self.coin_img, 'h', 32) // 2) - 8, amount_text, (255, 255, 255))
+                # 텍스트를 아이콘 오른쪽 또는 아래에 표시하도록 위치 계산
+                text_x = coin_x + icon_w // 2 + 8
+                text_y = coin_y - icon_h // 2 - 8
+                self.font.draw(text_x, text_y, amount_text, (255, 255, 255))
             except Exception:
                 try:
                     self.font.draw(coin_x - 8, coin_y - 40, amount_text, (255, 255, 255))
