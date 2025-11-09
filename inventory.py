@@ -36,20 +36,31 @@ def handle_events():
 
 
 def update(dt):
-    pass  # 인벤토리는 정적이므로 업데이트할 내용 없음
+    pass
 
 
 def draw():
-    # LEC11 (page 43) [cite: 553] 처럼, item_mode는
-    # 뒤의 game_world를 먼저 그리고 그 위에 UI를 그립니다.
     clear_canvas()
-    game_world.render()  # play_mode의 객체들을 그대로 그림
+    game_world.render()
 
     # 그 위에 배낭 UI 그리기
     if backpack_image:
         center_x = SCREEN_W // 2
         center_y = SCREEN_H // 2
-        backpack_image.draw(center_x, center_y)
+
+        # 배낭 이미지의 원본 크기
+        img_w = backpack_image.w
+        img_h = backpack_image.h
+
+        # 화면에 맞게 스케일 계산 (여백을 위해 0.9 배율 적용)
+        scale_w = (SCREEN_W * 0.9) / img_w
+        scale_h = (SCREEN_H * 0.9) / img_h
+        scale = min(scale_w, scale_h)  # 작은 쪽에 맞춤
+
+        # 스케일된 크기로 그리기
+        draw_w = int(img_w * scale)
+        draw_h = int(img_h * scale)
+        backpack_image.draw(center_x, center_y, draw_w, draw_h)
 
     update_canvas()
 

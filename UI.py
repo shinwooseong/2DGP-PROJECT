@@ -59,8 +59,8 @@ class UI:
 
         self.coin_img = _load('UI/have_money.png')
         self.potion_img = _load('Maid Run.png')
-        self.backpack_img = _load('UI/backpack_in.png')
-        self.transform_img = _load('Maid Idle.png')
+        self.backpack_img = _load('UI/back_base.png')
+        self.transform_img = _load('UI/back_base.png')
 
         # hp 변화에 따른 변수 추가
         self.hp_part_left = _load('UI/hp_image/1.png')
@@ -209,21 +209,33 @@ class UI:
                 pass
 
     def _draw_icons_right(self, screen_w, screen_h):
-        right_x = screen_w - self.margin
-        top_y = screen_h - self.margin - self.icon_anchor_y
-        spacing = self.icon_spacing
+        # 고정된 아이콘 크기 설정
+        icon_size = 48
+        right_margin = 16
+        top_margin = 16
+        spacing = 60
 
-        if self.transform_img:
-            self.transform_img.draw(right_x - 0 * spacing - 24, top_y)
-        if self.potion_img:
-            self.potion_img.draw(right_x - 1 * spacing - 24, top_y)
+        # 우측 상단 기준점
+        top_y = screen_h - top_margin - icon_size // 2
+
+        # 배낭 (가장 오른쪽, U 키)
         if self.backpack_img:
-            self.backpack_img.draw(right_x - 2 * spacing - 24, top_y)
+            backpack_x = screen_w - right_margin - icon_size // 2
+            self.backpack_img.draw(backpack_x, top_y, icon_size, icon_size)
+            if self.font:
+                self.font.draw(backpack_x - 8, top_y - icon_size // 2 - 8, 'U', (255, 255, 255))
 
-        if self.font:
-            text_y = top_y - self.icon_text_y_offset
-            self.font.draw(right_x - 2 * spacing - self.icon_text_x_offset, text_y, 'U', (255, 255, 255))
-            self.font.draw(right_x - 0 * spacing - self.icon_text_x_offset, text_y, 'X', (255, 255, 255))
+        # 변신 (배낭 왼쪽, X 키)
+        if self.transform_img:
+            transform_x = screen_w - right_margin - icon_size // 2 - spacing
+            self.transform_img.draw(transform_x, top_y, icon_size, icon_size)
+            if self.font:
+                self.font.draw(transform_x - 8, top_y - icon_size // 2 - 8, 'X', (255, 255, 255))
+
+        # 포션 (변신 왼쪽, 추후 확장용)
+        # if self.potion_img:
+        #     potion_x = screen_w - right_margin - icon_size // 2 - spacing * 2
+        #     self.potion_img.draw(potion_x, top_y, icon_size, icon_size)
 
     def draw(self):
         SCREEN_W = main_chracter.SCREEN_W

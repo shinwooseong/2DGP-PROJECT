@@ -2,9 +2,7 @@ import os
 from pico2d import load_image
 
 class Background:
-    def __init__(self, image_path):
-        if not os.path.isfile(image_path):
-            raise FileNotFoundError(f"Background image file not found: {image_path}")
+    def __init__(self, image_path='Scene_Overview.png'):
         self.image = load_image(image_path)
         self.width = self.image.w
         self.height = self.image.h

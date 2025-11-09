@@ -9,6 +9,7 @@ import title_mode
 
 import main_chracter
 from Monster import Green_MS, Trash_Monster, Red_MS
+from background import Background
 
 # UI import (simple direct import)
 from UI import UI
@@ -20,10 +21,15 @@ _last_hp = None
 player = None
 monsters = []
 ui = None
+background = None
 
 
 def init():
-    global player, monsters, _last_hp, ui
+    global player, monsters, _last_hp, ui, background
+
+    # 배경 생성 및 추가 (layer 0)
+    background = Background('Scene Overview.png')
+    game_world.add_object(background, 0)
 
     player = main_chracter.Main_character()
     game_world.add_object(player, 1)  # layer 1

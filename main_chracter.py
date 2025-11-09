@@ -7,7 +7,7 @@ import player_loader
 import player_states
 
 
-SCREEN_W, SCREEN_H = 1280, 720
+SCREEN_W, SCREEN_H = 1280, 736
 SPRITE_W, SPRITE_H = 96, 80
 
 
