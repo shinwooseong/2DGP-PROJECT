@@ -29,17 +29,17 @@ class UI:
 
         # 3. Layout Configuration (모든 "매직 넘버"를 여기로)
         self.margin = 8
-        self.icon_scale = 1.12
+        self.icon_scale = 1.5  # 1.12에서 1.5로 증가 (코인 아이콘)
 
         # (좌측 상단: 코인/HP)
-        self.coin_offset_x = 24  # 코인 아이콘 중심 X (좌측 여백 기준)
-        self.coin_offset_y = 24  # 코인 아이콘 중심 Y (상단 여백 기준)
-        self.hp_coin_spacing = 60  # 코인 아이콘과 HP 바 사이의 거리
-        self.money_text_x_offset = 8  # 코인 아이콘 우측 텍스트 오프셋
-        self.money_text_y_offset = 2  # 코인 아이콘 하단 텍스트 오프셋
-        self.hp_bar_width = 300
-        self.hp_bar_height = 35
-        self.hp_text_x_offset = 8  # HP 바 우측 텍스트 오프셋
+        self.coin_offset_x = 30  #
+        self.coin_offset_y = 30
+        self.hp_coin_spacing = 80
+        self.money_text_x_offset = 10
+        self.money_text_y_offset = 2
+        self.hp_bar_width = 390
+        self.hp_bar_height = 46
+        self.hp_text_x_offset = 10
 
         # (우측 상단: 아이콘)
         self.icon_anchor_y = 24  # 아이콘 중심 Y (상단 여백 기준)
@@ -61,6 +61,10 @@ class UI:
         self.potion_img = _load('Maid Run.png')
         self.backpack_img = _load('UI/back_base.png')
         self.transform_img = _load('UI/back_base.png')
+
+        # 캐릭터 얼굴 이미지
+        self.or_character_head = _load('UI/or_character_head.png')  # 기본 캐릭터 얼굴
+        self.tr_character_head = _load('UI/tr_character_head.png')  # 변신 캐릭터 얼굴
 
         # hp 변화에 따른 변수 추가
         self.hp_part_left = _load('UI/hp_image/1.png')
@@ -209,11 +213,14 @@ class UI:
                 pass
 
     def _draw_icons_right(self, screen_w, screen_h):
-        # 고정된 아이콘 크기 설정
-        icon_size = 48
-        right_margin = 16
-        top_margin = 16
-        spacing = 60
+        # 고정된 아이콘 크기 설정 (더 크게)
+        icon_size = 72  # 48에서 72로 (1.5배)
+        right_margin = 20  # 16에서 20으로
+        top_margin = 20  # 16에서 20으로
+        spacing = 80  # 60에서 80으로
+
+        # 캐릭터 얼굴 크기 (아이콘에 맞춰 증가)
+        head_size = 60  # 40에서 60으로 (1.5배)
 
         # 우측 상단 기준점
         top_y = screen_h - top_margin - icon_size // 2
@@ -223,14 +230,27 @@ class UI:
             backpack_x = screen_w - right_margin - icon_size // 2
             self.backpack_img.draw(backpack_x, top_y, icon_size, icon_size)
             if self.font:
-                self.font.draw(backpack_x - 8, top_y - icon_size // 2 - 8, 'U', (255, 255, 255))
+                self.font.draw(backpack_x - 10, top_y - icon_size // 2 - 10, 'U', (255, 255, 255))
 
         # 변신 (배낭 왼쪽, X 키)
         if self.transform_img:
             transform_x = screen_w - right_margin - icon_size // 2 - spacing
             self.transform_img.draw(transform_x, top_y, icon_size, icon_size)
             if self.font:
-                self.font.draw(transform_x - 8, top_y - icon_size // 2 - 8, 'X', (255, 255, 255))
+                self.font.draw(transform_x - 10, top_y - icon_size // 2 - 10, 'X', (255, 255, 255))
+
+            # 변신 아이콘 위에 캐릭터 얼굴 표시
+            # 현재 상태가 아닌 캐릭터의 얼굴을 표시
+            if self.player is not None:
+                is_transformed = getattr(self.player, 'is_transformed', False)
+                if is_transformed:
+                    # 변신 상태 → 기본 캐릭터 얼굴 표시
+                    if self.or_character_head:
+                        self.or_character_head.draw(transform_x, top_y, head_size, head_size)
+                else:
+                    # 기본 상태 → 변신 캐릭터 얼굴 표시
+                    if self.tr_character_head:
+                        self.tr_character_head.draw(transform_x, top_y, head_size, head_size)
 
         # 포션 (변신 왼쪽, 추후 확장용)
         # if self.potion_img:
