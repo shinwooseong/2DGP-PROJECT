@@ -579,55 +579,6 @@ class Green_MS(Monster):
         self.state = self.animator.state
 
 
-class EyeBall(Monster):
-    def __init__(self, x=400, y=400):
-        super().__init__(name='eyeball', x=x, y=y, hp=60, speed=20)
-        sheet_path = 'MS/EyeBall Monster-Sheet.png'
-        # known layout from user: top 10 idle, next 17 attack, next 2 damaged, rest death
-        idle_count = 14
-        attack_count = 26
-        damaged_count = 11
-        frame_time = {'idle': 0.12, 'attack': 0.08, 'damaged': 0.09, 'death': 0.12}
-        # try to compute total_frames by dividing image height H by a candidate total >= known
-        frames_map = {'idle': idle_count, 'attack': attack_count, 'damaged': damaged_count, 'death': 5}
-        try:
-            from PIL import Image
-            pil = Image.open(sheet_path)
-            W, H = pil.size
-            known = idle_count + attack_count + damaged_count
-            chosen_total = None
-            # try to find a divisor total_frames so that frame_h = H // total_frames is integer and reasonable
-            for total in range(known + 1, known + 61):
-                if H % total == 0:
-                    fh = H // total
-                    if 6 <= fh <= 300:
-                        chosen_total = total
-                        break
-            if chosen_total is None:
-                # fallback: try small frame heights (scan possible frame_h candidates)
-                for fh in range(6, 201):
-                    if H % fh == 0:
-                        total = H // fh
-                        if total >= known + 1:
-                            chosen_total = total
-                            break
-            if chosen_total is None:
-                # give up and use heuristic detection by Animator (default)
-                frames_map['death'] = 5
-            else:
-                death_count = max(1, chosen_total - known)
-                frames_map = {'idle': idle_count, 'attack': attack_count, 'damaged': damaged_count, 'death': death_count}
-        except Exception:
-            # PIL not available or failed -> keep fallback
-            frames_map = {'idle': idle_count, 'attack': attack_count, 'damaged': damaged_count, 'death': 5}
-
-        # Force frame height to 48 based on image analysis (prevents double-sprite slicing)
-        self.animator = Animator('', frames_map, frame_time, layout='vertical', single_image_path=sheet_path, single_frame_height=48)
-        self.combat = Combat(attack_power=12, attack_range=40, cooldown=0.8, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
-        self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=300)
-        self.state = self.animator.state
-
-
 class Trash_Monster(Monster):
     def __init__(self, x=300, y=300):
         super().__init__(name='trash_monster', x=x, y=y, hp=50, speed=25)
