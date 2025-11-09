@@ -25,8 +25,8 @@ class Main_character:
         self.frame = 0
 
         # 3. 스탯
-        self.health = 100
-        self.max_health = 100
+        self.health = 200
+        self.max_health = 200
         self.money = 0
         self.attack = 10
 

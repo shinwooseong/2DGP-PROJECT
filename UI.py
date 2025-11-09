@@ -114,44 +114,93 @@ class UI:
 
         left_edge = float(cx) - float(bar_w) / 2.0
 
+        if hp > 160:
+            bar_left, bar_mid, bar_right = self.hp_extra_part_left, self.hp_extra_part_mid, self.hp_extra_part_right
+        elif hp > 130:
+            bar_left, bar_mid, bar_right = self.hp_extra_part_left, self.hp_extra_part_mid, self.hp_part_right
+        elif hp > 100:
+            bar_left, bar_mid, bar_right = self.hp_extra_part_left, self.hp_part_mid, self.hp_part_right
+        elif hp >70:  # 61~100 ("그냥hp")
+            bar_left, bar_mid, bar_right = self.hp_part_left, self.hp_part_mid, self.hp_part_right
+        elif hp > 30:  # 31~60 ("그냥hp, 그냥hp, hp_0")
+            bar_left, bar_mid, bar_right = self.hp_part_left, self.hp_part_mid, self.hp_0_part_right
+        elif hp > 10:  # 11~30 ("그냥hp, hp_0, hp_0")
+            bar_left, bar_mid, bar_right = self.hp_part_left, self.hp_0_part_mid, self.hp_0_part_right
+        else:  # 0~10 ("다 hp_0")
+            bar_left, bar_mid, bar_right = self.hp_0_part_left, self.hp_0_part_mid, self.hp_0_part_right
+
+        # Use original image widths for left/mid/right so parts render at their native sizes
+        if bar_left is not None:
+            lw = int(getattr(bar_left, 'w', draw_h))
+        else:
+            lw = int(draw_h)
+        if bar_mid is not None:
+            mw = int(getattr(bar_mid, 'w', draw_h))
+        else:
+            mw = int(draw_h)
+        if bar_right is not None:
+            rw = int(getattr(bar_right, 'w', draw_h))
+        else:
+            rw = int(draw_h)
+
+        total_w = lw + mw + rw
+        # Recenter left_edge so bar is centered at cx using total native width
+        left_edge = float(cx) - float(total_w) / 2.0
+
         if self.hp_decor:
-            orig_w = float(getattr(self.hp_decor, 'w', draw_h))
-            orig_h = float(getattr(self.hp_decor, 'h', draw_h)) or float(draw_h)
-            decor_h = draw_h
-            decor_w = int(orig_w * (decor_h / orig_h))
-            decor_center_x = int(left_edge - (decor_w / 2.0))
-            self.hp_decor.draw(decor_center_x, cy, decor_w, decor_h)
+             orig_w = float(getattr(self.hp_decor, 'w', draw_h))
+             orig_h = float(getattr(self.hp_decor, 'h', draw_h)) or float(draw_h)
+             decor_h = draw_h
+             decor_w = int(orig_w * (decor_h / orig_h))
+             decor_center_x = int(left_edge - (decor_w / 2.0))
+             self.hp_decor.draw(decor_center_x, cy, decor_w, decor_h)
 
+        if bar_left and bar_mid and bar_right:
+            # 1. Draw background using native widths (no stretching)
+            try:
+                bar_left.draw(int(left_edge + lw / 2), cy, lw, draw_h)
+            except Exception:
+                pass
+            try:
+                bar_mid.draw(int(left_edge + lw + mw / 2), cy, mw, draw_h)
+            except Exception:
+                pass
+            try:
+                bar_right.draw(int(left_edge + lw + mw + rw / 2), cy, rw, draw_h)
+            except Exception:
+                pass
 
-        if self.hp_part_left and self.hp_part_mid and self.hp_part_right:
-            lw = getattr(self.hp_part_left, 'w', draw_h)
-            rw = getattr(self.hp_part_right, 'w', draw_h)
-            mid_total = max(0, bar_w - lw - rw)
-
-
-            self.hp_part_left.draw(int(left_edge + lw / 2), cy, lw, draw_h)
-            if mid_total > 0:
-                self.hp_part_mid.draw(int(left_edge + lw + mid_total / 2), cy, mid_total, draw_h)
-            self.hp_part_right.draw(int(left_edge + lw + mid_total + rw / 2), cy, rw, draw_h)
-
-
-            filled_mid = int(mid_total * ratio)
+            # 2. Filled middle portion according to ratio (draw fill over mid)
+            filled_mid = int(mw * ratio)
             if filled_mid > 0:
-                self.hp_part_mid.draw(int(left_edge + lw + filled_mid / 2), cy, filled_mid, draw_h)
+                try:
+                    # draw left portion of the mid image, clipped to filled_mid width (preserve original pixels)
+                    orig_mid_h = int(getattr(bar_mid, 'h', draw_h))
+                    # clip_draw(src_x, src_y, src_w, src_h, dst_x, dst_y, dst_w, dst_h)
+                    bar_mid.clip_draw(0, 0, filled_mid, orig_mid_h, int(left_edge + lw + filled_mid / 2), cy,
+                                      filled_mid, draw_h)
+                except Exception:
+                    try:
+                        bar_mid.draw(int(left_edge + lw + filled_mid / 2), cy, filled_mid, draw_h)
+                    except Exception:
+                        pass
 
         else:
-            # Fallback: simple rectangle
-            filled_w = int(bar_w * ratio)
-            if filled_w > 0:
-                draw_rectangle(int(cx - bar_w / 2), int(cy - draw_h / 2), int(cx - bar_w / 2 + filled_w),
-                               int(cy + draw_h / 2))
-            draw_rectangle(int(cx - bar_w / 2), int(cy - draw_h / 2), int(cx + bar_w / 2), int(cy + draw_h / 2))
+             # Fallback: simple rectangle
+             filled_w = int(bar_w * ratio)
+             if filled_w > 0:
+                 draw_rectangle(int(cx - bar_w / 2), int(cy - draw_h / 2), int(cx - bar_w / 2 + filled_w),
+                                int(cy + draw_h / 2))
+             draw_rectangle(int(cx - bar_w / 2), int(cy - draw_h / 2), int(cx + bar_w / 2), int(cy + draw_h / 2))
 
-        # Numeric HP text
+        # Numeric HP text (position to the right of the native-width bar)
         if self.font:
-            text_x = int(cx + bar_w / 2) + self.hp_text_x_offset
-            text_y = int(cy - draw_h / 4)
-            self.font.draw(text_x, text_y, f"{hp}/{max_hp}", (255, 255, 255))
+            try:
+                text_x = int(cx + total_w / 2) + self.hp_text_x_offset
+                text_y = int(cy - draw_h / 4)
+                self.font.draw(text_x, text_y, f"{hp}/{max_hp}", (255, 255, 255))
+            except Exception:
+                pass
 
     def _draw_icons_right(self, screen_w, screen_h):
         right_x = screen_w - self.margin
