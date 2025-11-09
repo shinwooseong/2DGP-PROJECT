@@ -62,6 +62,7 @@ class UI:
         self.backpack_img = _load('UI/backpack_in.png')
         self.transform_img = _load('Maid Idle.png')
 
+        # hp 변화에 따른 변수 추가
         self.hp_part_left = _load('UI/hp_image/1.png')
         self.hp_part_mid = _load('UI/hp_image/2.png')
         self.hp_part_right = _load('UI/hp_image/3.png')
