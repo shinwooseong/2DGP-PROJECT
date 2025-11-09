@@ -37,7 +37,7 @@ class UI:
         self.hp_coin_spacing = 60  # 코인 아이콘과 HP 바 사이의 거리
         self.money_text_x_offset = 8  # 코인 아이콘 우측 텍스트 오프셋
         self.money_text_y_offset = 8  # 코인 아이콘 하단 텍스트 오프셋
-        self.hp_bar_width = 180
+        self.hp_bar_width = 300
         self.hp_bar_height = 35
         self.hp_text_x_offset = 8  # HP 바 우측 텍스트 오프셋
 
@@ -112,8 +112,6 @@ class UI:
             hp, max_hp = 100, 100
         ratio = float(hp) / float(max_hp) if max_hp > 0 else 0.0
 
-        left_edge = float(cx) - float(bar_w) / 2.0
-
         if hp > 160:
             bar_left, bar_mid, bar_right = self.hp_extra_part_left, self.hp_extra_part_mid, self.hp_extra_part_right
         elif hp > 130:
@@ -129,22 +127,30 @@ class UI:
         else:  # 0~10 ("다 hp_0")
             bar_left, bar_mid, bar_right = self.hp_0_part_left, self.hp_0_part_mid, self.hp_0_part_right
 
-        # Use original image widths for left/mid/right so parts render at their native sizes
+        # Get original image widths for left, mid, right parts
         if bar_left is not None:
-            lw = int(getattr(bar_left, 'w', draw_h))
+            orig_lw = int(getattr(bar_left, 'w', draw_h))
         else:
-            lw = int(draw_h)
+            orig_lw = int(draw_h)
         if bar_mid is not None:
-            mw = int(getattr(bar_mid, 'w', draw_h))
+            orig_mw = int(getattr(bar_mid, 'w', draw_h))
         else:
-            mw = int(draw_h)
+            orig_mw = int(draw_h)
         if bar_right is not None:
-            rw = int(getattr(bar_right, 'w', draw_h))
+            orig_rw = int(getattr(bar_right, 'w', draw_h))
         else:
-            rw = int(draw_h)
+            orig_rw = int(draw_h)
 
+        # Calculate scale factor to fit bar_w
+        orig_total_w = orig_lw + orig_mw + orig_rw
+        scale = float(bar_w) / float(orig_total_w) if orig_total_w > 0 else 1.0
+
+        # Apply scale to all parts
+        lw = int(orig_lw * scale)
+        mw = int(orig_mw * scale)
+        rw = int(orig_rw * scale)
         total_w = lw + mw + rw
-        # Recenter left_edge so bar is centered at cx using total native width
+
         left_edge = float(cx) - float(total_w) / 2.0
 
         if self.hp_decor:
@@ -156,7 +162,7 @@ class UI:
              self.hp_decor.draw(decor_center_x, cy, decor_w, decor_h)
 
         if bar_left and bar_mid and bar_right:
-            # 1. Draw background using native widths (no stretching)
+            # 1. Draw background parts: all parts scaled proportionally
             try:
                 bar_left.draw(int(left_edge + lw / 2), cy, lw, draw_h)
             except Exception:
@@ -170,14 +176,14 @@ class UI:
             except Exception:
                 pass
 
-            # 2. Filled middle portion according to ratio (draw fill over mid)
+            # 2. Filled middle portion according to ratio (overlay)
             filled_mid = int(mw * ratio)
             if filled_mid > 0:
                 try:
-                    # draw left portion of the mid image, clipped to filled_mid width (preserve original pixels)
                     orig_mid_h = int(getattr(bar_mid, 'h', draw_h))
-                    # clip_draw(src_x, src_y, src_w, src_h, dst_x, dst_y, dst_w, dst_h)
-                    bar_mid.clip_draw(0, 0, filled_mid, orig_mid_h, int(left_edge + lw + filled_mid / 2), cy,
+                    # Clip from the original image proportionally
+                    clip_w = int(orig_mw * ratio)
+                    bar_mid.clip_draw(0, 0, clip_w, orig_mid_h, int(left_edge + lw + filled_mid / 2), cy,
                                       filled_mid, draw_h)
                 except Exception:
                     try:
@@ -193,7 +199,7 @@ class UI:
                                 int(cy + draw_h / 2))
              draw_rectangle(int(cx - bar_w / 2), int(cy - draw_h / 2), int(cx + bar_w / 2), int(cy + draw_h / 2))
 
-        # Numeric HP text (position to the right of the native-width bar)
+        # Numeric HP text (position to the right of the bar)
         if self.font:
             try:
                 text_x = int(cx + total_w / 2) + self.hp_text_x_offset
