@@ -6,6 +6,10 @@ import math
 DEBUG_MONSTER = False
 
 
+
+# 몬스터 추가할거면, Red_MS 복사해서 수정해서 사용하면 된다.
+# 그리고 play_mode.py에서 import하고 추가해주면 됨.
+
 class Animator:
     """Animation loader and frame manager.
     Supports per-state images (horizontal) and single-sheet modes:
