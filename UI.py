@@ -46,16 +46,20 @@ class UI:
         # 레이아웃 관련
         self.margin = 16
         self.hp_bar_width = 200
-        self.hp_bar_height = 18
-        # HP 이미지(있으면 사용)
+        self.hp_bar_height = 36
+        # HP 바 이미지를 부분별로 로드
         try:
-            self.hp_bg_img = load_image('UI/hp_bg.png')
+            self.hp_part_left = load_image('UI/hp_image/1.png')
         except Exception:
-            self.hp_bg_img = None
+            self.hp_part_left = None
         try:
-            self.hp_fill_img = load_image('UI/hp_fill.png')
+            self.hp_part_mid = load_image('UI/hp_image/2.png')
         except Exception:
-            self.hp_fill_img = None
+            self.hp_part_mid = None
+        try:
+            self.hp_part_right = load_image('UI/hp_image/3.png')
+        except Exception:
+            self.hp_part_right = None
 
     def set_player(self, player):
         self.player = player
@@ -127,7 +131,8 @@ class UI:
                     pass
 
         # HP 바: 코인 오른쪽에 배치
-        hp_x = coin_x + 100
+        # 코인 아이콘 오른쪽에서 여유를 두고 시작
+        hp_x = coin_x + icon_w + 40
         hp_y = coin_y
         bar_w = self.hp_bar_width
         bar_h = self.hp_bar_height
@@ -140,40 +145,53 @@ class UI:
                 hp = 100
                 max_hp = 100
             ratio = float(hp) / float(max_hp) if max_hp > 0 else 0.0
-            # 백그라운드 및 채워진 부분: 이미지 우선 사용
             filled_w = int(bar_w * ratio)
-            try:
-                if self.hp_bg_img is not None and self.hp_fill_img is not None:
-                    # draw bg scaled to bar_w x bar_h
-                    try:
-                        self.hp_bg_img.draw(hp_x, hp_y, bar_w, bar_h)
-                    except Exception:
-                        self.hp_bg_img.draw(hp_x, hp_y)
-                    # draw filled part by scaling fill image's width
-                    if filled_w > 0:
+
+            # Compose HP bar from three images (left, mid, right) if available
+            if self.hp_part_left is not None and self.hp_part_mid is not None and self.hp_part_right is not None:
+                try:
+                    lw = getattr(self.hp_part_left, 'w', int(bar_h))
+                    lh = getattr(self.hp_part_left, 'h', int(bar_h))
+                    rw = getattr(self.hp_part_right, 'w', int(bar_h))
+                    rh = getattr(self.hp_part_right, 'h', int(bar_h))
+                    # mid area width
+                    mid_total = max(0, bar_w - lw - rw)
+                    # draw background (left, mid full, right)
+                    self.hp_part_left.draw(hp_x - bar_w//2 + lw//2, hp_y, lw, bar_h)
+                    if mid_total > 0:
                         try:
-                            self.hp_fill_img.draw(hp_x - bar_w//2 + filled_w/2, hp_y, filled_w, bar_h)
+                            self.hp_part_mid.draw(hp_x - bar_w//2 + lw + mid_total//2, hp_y, mid_total, bar_h)
                         except Exception:
-                            self.hp_fill_img.draw(hp_x - bar_w//2 + filled_w/2, hp_y)
-                else:
-                    # fall back to outline placeholders
-                    try:
-                        draw_rectangle(hp_x - bar_w//2, hp_y - bar_h//2, hp_x + bar_w//2, hp_y + bar_h//2)
-                    except Exception:
-                        pass
-                    if filled_w > 0:
+                            self.hp_part_mid.draw(hp_x, hp_y)
+                    self.hp_part_right.draw(hp_x + bar_w//2 - rw//2, hp_y, rw, bar_h)
+
+                    # draw filled portion based on ratio: fill the mid area
+                    filled_mid = int(mid_total * ratio)
+                    if filled_mid > 0:
                         try:
-                            draw_rectangle(hp_x - bar_w//2, hp_y - bar_h//2, hp_x - bar_w//2 + filled_w, hp_y + bar_h//2)
+                            # draw filled mid using same mid image scaled to filled_mid width
+                            self.hp_part_mid.draw(hp_x - bar_w//2 + lw + filled_mid//2, hp_y, filled_mid, bar_h)
                         except Exception:
                             pass
+                except Exception:
                     try:
                         draw_rectangle(hp_x - bar_w//2, hp_y - bar_h//2, hp_x + bar_w//2, hp_y + bar_h//2)
                     except Exception:
                         pass
-            except Exception:
-                # 안전 폴백
+            else:
                 try:
+                    # draw filled rectangle then outline
+                    filled_w = int(bar_w * ratio)
+                    if filled_w > 0:
+                        draw_rectangle(hp_x - bar_w//2, hp_y - bar_h//2, hp_x - bar_w//2 + filled_w, hp_y + bar_h//2)
                     draw_rectangle(hp_x - bar_w//2, hp_y - bar_h//2, hp_x + bar_w//2, hp_y + bar_h//2)
+                except Exception:
+                    pass
+
+            # 숫자 HP 표시 (항상 보이도록)
+            if self.font:
+                try:
+                    self.font.draw(hp_x + bar_w//2 + 8, hp_y - bar_h//4, f"{hp}/{max_hp}", (255,255,255))
                 except Exception:
                     pass
         except Exception:
