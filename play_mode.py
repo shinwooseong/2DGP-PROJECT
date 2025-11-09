@@ -8,7 +8,7 @@ import inventory
 import title_mode
 
 import main_chracter
-from Monster import Green_MS, EyeBall, Trash_Monster, Red_MS
+from Monster import Green_MS, Trash_Monster, Red_MS
 
 # UI import (simple direct import)
 from UI import UI
@@ -32,7 +32,6 @@ def init():
         Green_MS(300, 200),
         Green_MS(600, 200),
         Trash_Monster(100, 100),
-        EyeBall(400, 400),
         Red_MS(500, 150),
     ]
     game_world.add_objects(monsters, 1)  # layer 1
