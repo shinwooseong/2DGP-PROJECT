@@ -1,395 +1,57 @@
-# main_chracter.py
 import time
 from pico2d import load_image
 from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE
 
 from state_machine import StateMachine
+import player_loader
+import player_states
+
 
 SCREEN_W, SCREEN_H = 1280, 720
-SPRITE_W, SPRITE_H = 96, 80  # 실제 이미지 크기: 768x80 = 8프레임 × 96x80
-
-# 이동 속도(px/sec)
-WALK_SPEED = 140.0
-ROLL_SPEED = 360.0
-# 구르기 총 이동 거리(픽셀)
-ROLL_DISTANCE = 80.0
+SPRITE_W, SPRITE_H = 96, 80
 
 
-class Idle:
-    def __init__(self, character):
-        self.character = character
-
-    def enter(self, e):
-        self.character.frame = 0
-        self.character.frame_time_acc = 0.0
-
-    def exit(self, e):
-        pass
-
-    def do(self, dt): # dt 인자 추가
-        # 시간 기반 프레임 진행
-        frames = self.character.idle_frames[self.character.dir]
-
-        self.character.frame_time_acc += dt # self.character.dt 대신 dt 사용
-        frame_time = 0.1  # idle 프레임 시간
-        while self.character.frame_time_acc >= frame_time:
-            self.character.frame_time_acc -= frame_time
-            self.character.frame = (self.character.frame + 1) % frames
-
-        # 입력이 있으면 걷기 상태로
-        if any(self.character.key_map.values()):
-            self.character.state_machine.handle_state_event(('MOVE', None))
-
-    def draw(self):
-        image = self.character.idle_images[self.character.dir]
-        frames = self.character.idle_frames[self.character.dir]
-        frame_idx = int(self.character.frame) % frames
-
-        # 각 프레임이 가로로 배열되어 있음 (X축만)
-        x_offset = frame_idx * SPRITE_W
-        y_offset = self.character.idle_y_offsets[self.character.dir]
-        image.clip_draw(
-            x_offset, y_offset,
-            SPRITE_W, SPRITE_H,
-            self.character.x,
-            self.character.y,
-        )
-
-
-class Walk:
-    def __init__(self, character):
-        self.character = character
-
-    def enter(self, e):
-        self.character.frame = 0
-        self.character.frame_time_acc = 0.0
-
-    def exit(self, e):
-        pass
-
-    def do(self, dt): # dt 인자 추가
-        # 시간 기반 프레임 증가
-        frames = self.character.run_frames[self.character.dir]
-
-        self.character.frame_time_acc += dt # self.character.dt 대신 dt 사용
-        frame_time = 0.08  # run 프레임 시간 (walk보다 약간 빠름)
-        while self.character.frame_time_acc >= frame_time:
-            self.character.frame_time_acc -= frame_time
-            self.character.frame = (self.character.frame + 1) % frames
-
-        # 시간 기반으로 이동 (px/sec)
-        dx = 0.0
-        dy = 0.0
-        speed = WALK_SPEED
-        if self.character.key_map['UP']:
-            dy += speed * dt # self.character.dt 대신 dt 사용
-        if self.character.key_map['DOWN']:
-            dy -= speed * dt # self.character.dt 대신 dt 사용
-        if self.character.key_map['LEFT']:
-            dx -= speed * dt # self.character.dt 대신 dt 사용
-        if self.character.key_map['RIGHT']:
-            dx += speed * dt # self.character.dt 대신 dt 사용
-
-        if dx == 0.0 and dy == 0.0:
-            self.character.state_machine.handle_state_event(('STOP', None))
-            return
-
-        # 적용 및 화면 경계
-        self.character.x = max(SPRITE_W // 2, min(SCREEN_W - SPRITE_W // 2, self.character.x + dx))
-        self.character.y = max(SPRITE_H // 2, min(SCREEN_H - SPRITE_H // 2, self.character.y + dy))
-
-    def draw(self):
-        image = self.character.run_images[self.character.dir]
-        frames = self.character.run_frames[self.character.dir]
-        frame_idx = int(self.character.frame) % frames
-
-        x_offset = frame_idx * SPRITE_W
-        y_offset = self.character.run_y_offsets[self.character.dir]
-        image.clip_draw(
-            x_offset, y_offset,
-            SPRITE_W, SPRITE_H,
-            self.character.x,
-            self.character.y,
-        )
-
-
-class Roll:
-    def __init__(self, character):
-        self.character = character
-
-    def enter(self, e):
-        self.character.frame = 0
-        self.character.frame_time_acc = 0.0
-        self.character.roll_moved = 0.0
-
-    def exit(self, e):
-        pass
-
-    def do(self, dt): # dt 인자 추가
-        # 구르기 중에도 방향 키 입력을 받아서 방향 업데이트
-        if self.character.key_map['UP']:
-            self.character.dir = 'UP'
-        elif self.character.key_map['DOWN']:
-            self.character.dir = 'DOWN'
-        elif self.character.key_map['LEFT']:
-            self.character.dir = 'LEFT'
-        elif self.character.key_map['RIGHT']:
-            self.character.dir = 'RIGHT'
-
-        frames = self.character.run_frames[self.character.dir]
-
-        # 시간 기반 프레임 진행 (마지막 프레임에서 STOP)
-        self.character.frame_time_acc += dt # self.character.dt 대신 dt 사용
-        frame_time = 0.06  # roll은 더 빠르게
-        while self.character.frame_time_acc >= frame_time:
-            self.character.frame_time_acc -= frame_time
-            if self.character.frame < frames - 1:
-                self.character.frame += 1
-            else:
-                # 마지막 프레임에 도달하면 상태 전환
-                self.character.state_machine.handle_state_event(('STOP', None))
-                break
-
-        # 구르기 이동
-        remaining = max(0.0, ROLL_DISTANCE - getattr(self.character, 'roll_moved', 0.0))
-        if remaining > 0.0:
-            move = min(ROLL_SPEED * dt, remaining)
-            if self.character.dir == 'UP':
-                self.character.y = min(SCREEN_H - SPRITE_H // 2, self.character.y + move)
-            elif self.character.dir == 'DOWN':
-                self.character.y = max(SPRITE_H // 2, self.character.y - move)
-            elif self.character.dir == 'LEFT':
-                self.character.x = max(SPRITE_W // 2, self.character.x - move)
-            elif self.character.dir == 'RIGHT':
-                self.character.x = min(SCREEN_W - SPRITE_W // 2, self.character.x + move)
-            self.character.roll_moved = getattr(self.character, 'roll_moved', 0.0) + move
-
-    def draw(self):
-        image = self.character.run_images[self.character.dir]
-        frames = self.character.run_frames[self.character.dir]
-        frame_idx = int(self.character.frame) % frames
-
-        x_offset = frame_idx * SPRITE_W
-        y_offset = self.character.run_y_offsets[self.character.dir]
-        image.clip_draw(
-            x_offset, y_offset,
-            SPRITE_W, SPRITE_H,
-            self.character.x,
-            self.character.y,
-        )
-
-# 공격 구현 시작
-class Attack:
-    def __init__(self, character):
-        self.character = character
-        self.stage = 1
-        self.frame = 0
-        self.frame_time_acc = 0.0
-        self.animation_ended = False  # 애니메이션 완료 플래그
-        self._hit_done = False
-
-    def enter(self, e):
-        self.stage = getattr(self.character, 'attack_stage', 1)
-        self.character.frame = 0
-        self.frame = 0
-        self.frame_time_acc = 0.0
-        self.animation_ended = False  # 플래그 초기화
-        self.character.next_attack_request = False
-        self._hit_done = False
-        # 메인 루프에서 감지할 플래그
-        self.character.attack_hit_pending = False
-
-    def exit(self, e):
-        pass
-
-    def do(self, dt): # dt 인자 추가
-        frames = self.character.attack_frames[self.stage][self.character.dir]
-        frame_time = 0.07 if self.stage == 1 else 0.06
-
-        # 히트 프레임: 애니의 중간 프레임
-        hit_frame = max(0, frames // 2)
-
-        # time.time() 대신 dt 사용
-        self.frame_time_acc += dt
-
-        # 공격 중에도 이동 가능 (공격 방향은 유지하되, 이동은 허용)
-        dx = 0.0
-        dy = 0.0
-        move_speed = 70.0  # 공격 중 이동 속도 (일반 이동보다 느림)
-        if self.character.key_map['UP']:
-            dy += move_speed * dt
-        if self.character.key_map['DOWN']:
-            dy -= move_speed * dt
-        if self.character.key_map['LEFT']:
-            dx -= move_speed * dt
-        if self.character.key_map['RIGHT']:
-            dx += move_speed * dt
-
-        # 이동 적용 및 화면 경계
-        if dx != 0.0 or dy != 0.0:
-            self.character.x = max(SPRITE_W // 2, min(SCREEN_W - SPRITE_W // 2, self.character.x + dx))
-            self.character.y = max(SPRITE_H // 2, min(SCREEN_H - SPRITE_H // 2, self.character.y + dy))
-
-        while self.frame_time_acc >= frame_time:
-            self.frame_time_acc -= frame_time
-            self.frame += 1
-
-            # 히트 프레임 도달 시 메인 루프에 신호를 보냄 (한 번만)
-            if not self._hit_done and self.frame >= hit_frame:
-                self._hit_done = True
-                self.character.attack_hit_pending = True
-
-            if self.frame >= frames:
-                self.animation_ended = True
-
-                # 애니메이션이 끝났을 때
-                if self.stage == 1 and self.character.next_attack_request:
-                    # 1타 완료 후 재입력 감지 → 2타 발동
-                    self.stage = 2
-                    self.character.attack_stage = 2
-                    self.frame = 0
-                    self.frame_time_acc = 0.0
-                    self.animation_ended = False
-                    self.character.next_attack_request = False
-                    # 콤보로 넘어갈 때 히트 플래그 초기화
-                    self._hit_done = False
-                    self.character.attack_hit_pending = False
-                    frames = self.character.attack_frames[self.stage][self.character.dir]
-                    frame_time = 0.06
-                    continue
-                else:
-                    # 공격 종료 - 1초 내 재입력 대기
-                    self.character.last_attack_end_time = time.time() # 콤보 타이밍은 time.time() 유지
-                    self.character.next_attack_request = False
-                    self._hit_done = False
-                    self.character.attack_hit_pending = False
-                    self.character.state_machine.handle_state_event(('STOP', None))
-                    return
-
-    def draw(self):
-        img = self.character.attack_images[self.stage][self.character.dir]
-        frames = self.character.attack_frames[self.stage][self.character.dir]
-        frame_idx = int(self.frame) % frames
-        x_offset = frame_idx * SPRITE_W
-        y_offset = self.character.attack_y_offsets[self.stage][self.character.dir]
-        img.clip_draw(
-            x_offset, y_offset,
-            SPRITE_W, SPRITE_H,
-            self.character.x, self.character.y
-        )
-
-
+# Idle, Walk, Roll, Attack 클래스 정의 모두 삭제하고 player_states 모듈로 이동
 
 class Main_character:
     def __init__(self):
-        # 위치/상태
+        # 1. 컴포넌트(로더) 생성
+        self.loader = player_loader.PlayerLoader()
+
+        # 2. 위치/상태
         self.x = SCREEN_W // 2
         self.y = SCREEN_H // 2
         self.dir = 'DOWN'
         self.frame = 0
 
-        # 스탯
+        # 3. 스탯
         self.health = 100
         self.max_health = 100
         self.money = 0
         self.attack = 10
 
-        # 입력 맵
+        # 4. 입력 맵
         self.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
-        # 타이밍
+        # 5. 타이밍
         self.frame_time_acc = 0.0
         self.roll_moved = 0.0
 
-        # 이미지 로드
-        try:
-            self.idle_images = {
-                'DOWN': load_image('or_character/IDLE/idle_down.png'),
-                'UP': load_image('or_character/IDLE/idle_up.png'),
-                'LEFT': load_image('or_character/IDLE/idle_left.png'),
-                'RIGHT': load_image('or_character/IDLE/idle_right.png'),
-            }
-        except Exception:
-            self.idle_images = {d: load_image('Maid Idle.png') for d in ('DOWN','UP','LEFT','RIGHT')}
+        # 모든 이미지 로딩 및 Y-Offset 계산 코드 삭제 (loader가 대신 하게 하기!)
 
-        try:
-            self.run_images = {
-                'DOWN': load_image('or_character/RUN/run_down.png'),
-                'UP': load_image('or_character/RUN/run_up.png'),
-                'LEFT': load_image('or_character/RUN/run_left.png'),
-                'RIGHT': load_image('or_character/RUN/run_right.png'),
-            }
-        except Exception:
-            self.run_images = {d: load_image('Maid Run.png') for d in ('DOWN','UP','LEFT','RIGHT')}
-
-        # 공격 이미지(1,2단)
-        try:
-            self.attack_images = {
-                1: {d: load_image(f'or_character/ATTACK 1/attack1_{d.lower()}.png') for d in ('DOWN','UP','LEFT','RIGHT')},
-                2: {d: load_image(f'or_character/ATTACK 2/attack2_{d.lower()}.png') for d in ('DOWN','UP','LEFT','RIGHT')}
-            }
-        except Exception:
-            # fallback same image
-            self.attack_images = {1: {d: load_image('Maid Idle.png') for d in ('DOWN','UP','LEFT','RIGHT')},
-                                  2: {d: load_image('Maid Idle.png') for d in ('DOWN','UP','LEFT','RIGHT')}}
-
-        # 프레임 수
-        self.idle_frames = {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}
-        self.run_frames = {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}
-        self.attack_frames = {1: {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}, 2: {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}}
-
-        # Y 오프셋 자동 계산
-        self.idle_y_offsets = {}
-        self.run_y_offsets = {}
-        self.attack_y_offsets = {1: {}, 2: {}}
-        try:
-            from PIL import Image
-            import numpy as np
-            # idle
-            for d in ('DOWN','UP','LEFT','RIGHT'):
-                p = f'or_character/IDLE/idle_{d.lower()}.png'
-                pil = Image.open(p).convert('RGBA')
-                arr = np.array(pil)
-                alpha = arr[:,:,3]
-                rows = np.where(alpha.any(axis=1))[0]
-                self.idle_y_offsets[d] = int(rows[0]) if len(rows)>0 else 0
-            # run
-            for d in ('DOWN','UP','LEFT','RIGHT'):
-                p = f'or_character/RUN/run_{d.lower()}.png'
-                pil = Image.open(p).convert('RGBA')
-                arr = np.array(pil)
-                alpha = arr[:,:,3]
-                rows = np.where(alpha.any(axis=1))[0]
-                self.run_y_offsets[d] = int(rows[0]) if len(rows)>0 else 0
-            # attack
-            for stage in (1,2):
-                for d in ('DOWN','UP','LEFT','RIGHT'):
-                    p = f'or_character/ATTACK {stage}/attack{stage}_{d.lower()}.png'
-                    pil = Image.open(p).convert('RGBA')
-                    arr = np.array(pil)
-                    alpha = arr[:,:,3]
-                    rows = np.where(alpha.any(axis=1))[0]
-                    self.attack_y_offsets[stage][d] = int(rows[0]) if len(rows)>0 else 0
-        except Exception:
-            for d in ('DOWN','UP','LEFT','RIGHT'):
-                self.idle_y_offsets[d] = 0
-                self.run_y_offsets[d] = 0
-            for stage in (1,2):
-                for d in ('DOWN','UP','LEFT','RIGHT'):
-                    self.attack_y_offsets[stage][d] = 0
-
-        # 공격 콤보 관리
+        # 6. 공격 콤보 관리
         self.attack_stage = 1
         self.next_attack_request = False
         self.last_attack_end_time = 0.0
         self.attack_combo_window = 1.0
 
-        # 상태 인스턴스
-        self.IDLE = Idle(self)
-        self.WALK = Walk(self)
-        self.ROLL = Roll(self)
-        self.ATTACK = Attack(self)
+        # 7. 상태 인스턴스 (player_states에서 가져옴)
+        self.IDLE = player_states.Idle(self)
+        self.WALK = player_states.Walk(self)
+        self.ROLL = player_states.Roll(self)
+        self.ATTACK = player_states.Attack(self)
 
+        # 8. 상태 머신
         self.state_machine = StateMachine(
             self.IDLE,
             {
@@ -414,7 +76,6 @@ class Main_character:
         )
 
     def update(self, dt):
-        # state machine update
         try:
             self.state_machine.update(dt)
         except Exception:
@@ -436,7 +97,6 @@ class Main_character:
             print("Player died")
 
     def handle_event(self, event):
-        # keyboard events from sdl2
         try:
             from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE
         except Exception:
@@ -461,10 +121,12 @@ class Main_character:
                 except Exception:
                     pass
             elif key == SDLK_a:
+                # 공격 키 처리
                 now = time.time()
                 if self.state_machine.cur_state is self.ATTACK:
                     self.next_attack_request = True
                 else:
+                    # 공격 시작
                     if now - self.last_attack_end_time <= self.attack_combo_window:
                         self.attack_stage = 2
                     else:
