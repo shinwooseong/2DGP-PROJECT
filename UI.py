@@ -36,7 +36,7 @@ class UI:
         self.coin_offset_y = 24  # 코인 아이콘 중심 Y (상단 여백 기준)
         self.hp_coin_spacing = 60  # 코인 아이콘과 HP 바 사이의 거리
         self.money_text_x_offset = 8  # 코인 아이콘 우측 텍스트 오프셋
-        self.money_text_y_offset = 8  # 코인 아이콘 하단 텍스트 오프셋
+        self.money_text_y_offset = 2  # 코인 아이콘 하단 텍스트 오프셋
         self.hp_bar_width = 300
         self.hp_bar_height = 35
         self.hp_text_x_offset = 8  # HP 바 우측 텍스트 오프셋

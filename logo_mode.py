@@ -9,11 +9,7 @@ logo_start_time = 0.0
 
 def init():
     global image, logo_start_time
-    try:
-        image = load_image('tuk_credit.png')
-    except Exception as e:
-        print(f"로고 이미지 로드 오류: {e}. 임시 이미지를 사용합니다.")
-        image = load_image('Maid Idle.png')  # 임시 이미지
+    image = load_image('UI/moonlighter_logo.png')
 
     logo_start_time = get_time()  # 2. 시작 시간을 기록합니다.
 
@@ -33,8 +29,10 @@ def update(dt):  # game_framework가 dt를 전달해줍니다.
 def draw():
     clear_canvas()
     if image:
-        # (이미지 크기와 캔버스 크기에 맞게 좌표를 조절하세요)
-        image.draw(main_chracter.SCREEN_W // 2, main_chracter.SCREEN_H // 2)
+        logo_w = int(main_chracter.SCREEN_W * 0.7)
+        logo_h = int(main_chracter.SCREEN_H * 0.7)
+        image.draw(main_chracter.SCREEN_W // 2, main_chracter.SCREEN_H // 2,
+                   logo_w, logo_h)
     update_canvas()
 
 
