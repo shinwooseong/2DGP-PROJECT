@@ -11,3 +11,4 @@ class Background:
 
     def draw(self):
         self.image.draw(self.width // 2, self.height // 2)
+#이미지 만들어야함
