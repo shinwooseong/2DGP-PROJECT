@@ -5,7 +5,7 @@ from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, 
 
 from state_machine import StateMachine
 
-SCREEN_W, SCREEN_H = 1000, 1000
+SCREEN_W, SCREEN_H = 1280, 720
 SPRITE_W, SPRITE_H = 96, 80  # 실제 이미지 크기: 768x80 = 8프레임 × 96x80
 
 # 이동 속도(px/sec)
@@ -282,119 +282,113 @@ class Attack:
 
 class Main_character:
     def __init__(self):
+        # 위치/상태
         self.x = SCREEN_W // 2
         self.y = SCREEN_H // 2
         self.dir = 'DOWN'
         self.frame = 0
 
+        # 스탯
         self.health = 100
+        self.max_health = 100
+        self.money = 0
         self.attack = 10
+
+        # 입력 맵
         self.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
-        # 시간 관련
-        # self.prev_time = time.time() # game_framework에서 dt를 받으므로 삭제
-        # self.dt = 0.0 # 삭제
+        # 타이밍
         self.frame_time_acc = 0.0
         self.roll_moved = 0.0
 
-        # IDLE 이미지 로드 (각 방향별)
-        self.idle_images = {
-            'DOWN': load_image('or_character/IDLE/idle_down.png'),
-            'UP': load_image('or_character/IDLE/idle_up.png'),
-            'LEFT': load_image('or_character/IDLE/idle_left.png'),
-            'RIGHT': load_image('or_character/IDLE/idle_right.png'),
-        }
-
-        # RUN 이미지 로드 (각 방향별)
-        self.run_images = {
-            'DOWN': load_image('or_character/RUN/run_down.png'),
-            'UP': load_image('or_character/RUN/run_up.png'),
-            'LEFT': load_image('or_character/RUN/run_left.png'),
-            'RIGHT': load_image('or_character/RUN/run_right.png'),
-        }
-
-        self.attack_images = {
-            1: {
-                'DOWN': load_image('or_character/ATTACK 1/attack1_down.png'),
-                'UP': load_image('or_character/ATTACK 1/attack1_up.png'),
-                'LEFT': load_image('or_character/ATTACK 1/attack1_left.png'),
-                'RIGHT': load_image('or_character/ATTACK 1/attack1_right.png'),
-            },
-            2: {
-                'DOWN': load_image('or_character/ATTACK 2/attack2_down.png'),
-                'UP': load_image('or_character/ATTACK 2/attack2_up.png'),
-                'LEFT': load_image('or_character/ATTACK 2/attack2_left.png'),
-                'RIGHT': load_image('or_character/ATTACK 2/attack2_right.png'),
+        # 이미지 로드
+        try:
+            self.idle_images = {
+                'DOWN': load_image('or_character/IDLE/idle_down.png'),
+                'UP': load_image('or_character/IDLE/idle_up.png'),
+                'LEFT': load_image('or_character/IDLE/idle_left.png'),
+                'RIGHT': load_image('or_character/IDLE/idle_right.png'),
             }
-        }
+        except Exception:
+            self.idle_images = {d: load_image('Maid Idle.png') for d in ('DOWN','UP','LEFT','RIGHT')}
 
-        # 각 방향별 프레임 수 (모두 8프레임)
-        self.idle_frames = {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}
-        self.run_frames = {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}
-        self.attack_frames = {1: {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']},
-                              2: {d: 8 for d in ['DOWN', 'UP', 'LEFT', 'RIGHT']}}
+        try:
+            self.run_images = {
+                'DOWN': load_image('or_character/RUN/run_down.png'),
+                'UP': load_image('or_character/RUN/run_up.png'),
+                'LEFT': load_image('or_character/RUN/run_left.png'),
+                'RIGHT': load_image('or_character/RUN/run_right.png'),
+            }
+        except Exception:
+            self.run_images = {d: load_image('Maid Run.png') for d in ('DOWN','UP','LEFT','RIGHT')}
 
-        # 각 이미지의 Y 오프셋 자동 계산 (PIL 사용)
+        # 공격 이미지(1,2단)
+        try:
+            self.attack_images = {
+                1: {d: load_image(f'or_character/ATTACK 1/attack1_{d.lower()}.png') for d in ('DOWN','UP','LEFT','RIGHT')},
+                2: {d: load_image(f'or_character/ATTACK 2/attack2_{d.lower()}.png') for d in ('DOWN','UP','LEFT','RIGHT')}
+            }
+        except Exception:
+            # fallback same image
+            self.attack_images = {1: {d: load_image('Maid Idle.png') for d in ('DOWN','UP','LEFT','RIGHT')},
+                                  2: {d: load_image('Maid Idle.png') for d in ('DOWN','UP','LEFT','RIGHT')}}
+
+        # 프레임 수
+        self.idle_frames = {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}
+        self.run_frames = {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}
+        self.attack_frames = {1: {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}, 2: {d: 8 for d in ('DOWN','UP','LEFT','RIGHT')}}
+
+        # Y 오프셋 자동 계산
         self.idle_y_offsets = {}
         self.run_y_offsets = {}
         self.attack_y_offsets = {1: {}, 2: {}}
-
         try:
             from PIL import Image
             import numpy as np
+            # idle
+            for d in ('DOWN','UP','LEFT','RIGHT'):
+                p = f'or_character/IDLE/idle_{d.lower()}.png'
+                pil = Image.open(p).convert('RGBA')
+                arr = np.array(pil)
+                alpha = arr[:,:,3]
+                rows = np.where(alpha.any(axis=1))[0]
+                self.idle_y_offsets[d] = int(rows[0]) if len(rows)>0 else 0
+            # run
+            for d in ('DOWN','UP','LEFT','RIGHT'):
+                p = f'or_character/RUN/run_{d.lower()}.png'
+                pil = Image.open(p).convert('RGBA')
+                arr = np.array(pil)
+                alpha = arr[:,:,3]
+                rows = np.where(alpha.any(axis=1))[0]
+                self.run_y_offsets[d] = int(rows[0]) if len(rows)>0 else 0
+            # attack
+            for stage in (1,2):
+                for d in ('DOWN','UP','LEFT','RIGHT'):
+                    p = f'or_character/ATTACK {stage}/attack{stage}_{d.lower()}.png'
+                    pil = Image.open(p).convert('RGBA')
+                    arr = np.array(pil)
+                    alpha = arr[:,:,3]
+                    rows = np.where(alpha.any(axis=1))[0]
+                    self.attack_y_offsets[stage][d] = int(rows[0]) if len(rows)>0 else 0
+        except Exception:
+            for d in ('DOWN','UP','LEFT','RIGHT'):
+                self.idle_y_offsets[d] = 0
+                self.run_y_offsets[d] = 0
+            for stage in (1,2):
+                for d in ('DOWN','UP','LEFT','RIGHT'):
+                    self.attack_y_offsets[stage][d] = 0
 
-            # IDLE
-            for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                img_path = f'or_character/IDLE/idle_{direction.lower()}.png' # 경로 수정
-                pil_img = Image.open(img_path).convert('RGBA')
-                arr = np.array(pil_img)
-                alpha = arr[:, :, 3]
-                rows_with_pixels = np.where(alpha.any(axis=1))[0]
-                self.idle_y_offsets[direction] = int(rows_with_pixels[0]) if len(rows_with_pixels) > 0 else 0
-
-            # RUN
-            for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                img_path = f'or_character/RUN/run_{direction.lower()}.png' # 경로 수정
-                pil_img = Image.open(img_path).convert('RGBA')
-                arr = np.array(pil_img)
-                alpha = arr[:, :, 3]
-                rows_with_pixels = np.where(alpha.any(axis=1))[0]
-                self.run_y_offsets[direction] = int(rows_with_pixels[0]) if len(rows_with_pixels) > 0 else 0
-
-            # ATTACK (stage 1, 2)
-            for stage in (1, 2):
-                for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                    img_path = f'or_character/ATTACK {stage}/attack{stage}_{direction.lower()}.png' # 경로 수정
-                    pil_img = Image.open(img_path).convert('RGBA')
-                    arr = np.array(pil_img)
-                    alpha = arr[:, :, 3]
-                    rows_with_pixels = np.where(alpha.any(axis=1))[0]
-                    self.attack_y_offsets[stage][direction] = int(rows_with_pixels[0]) if len(
-                        rows_with_pixels) > 0 else 0
-
-        except Exception as e:
-            print(f"Y offset 계산 오류 (파일 경로 'or_character/...' 확인): {e}")
-            for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                self.idle_y_offsets[direction] = 0
-                self.run_y_offsets[direction] = 0
-            for stage in (1, 2):
-                for direction in ['DOWN', 'UP', 'LEFT', 'RIGHT']:
-                    self.attack_y_offsets[stage][direction] = 0
-
-
-            # 공격 콤보 상태
+        # 공격 콤보 관리
         self.attack_stage = 1
         self.next_attack_request = False
         self.last_attack_end_time = 0.0
-        self.attack_combo_window = 1.0  # 1초 이내에 재입력 시 2타
-
+        self.attack_combo_window = 1.0
 
         # 상태 인스턴스
         self.IDLE = Idle(self)
         self.WALK = Walk(self)
         self.ROLL = Roll(self)
         self.ATTACK = Attack(self)
-
 
         self.state_machine = StateMachine(
             self.IDLE,
@@ -411,7 +405,7 @@ class Main_character:
                 },
                 self.ROLL: {
                     'STOP': lambda e: self.IDLE,
-                    'ATTACK': lambda e: self.ATTACK # 구르기 중 공격 가능하도록 유지
+                    'ATTACK': lambda e: self.ATTACK
                 },
                 self.ATTACK: {
                     'STOP': lambda e: self.IDLE
@@ -419,15 +413,20 @@ class Main_character:
             }
         )
 
-    def update(self, dt): # dt 인자 추가
-        # dt 계산 로직 삭제 (game_framework가 대신 함)
-        self.state_machine.update(dt) # dt를 state_machine으로 전달
+    def update(self, dt):
+        # state machine update
+        try:
+            self.state_machine.update(dt)
+        except Exception:
+            pass
 
     def draw(self):
-        self.state_machine.draw()
+        try:
+            self.state_machine.draw()
+        except Exception:
+            pass
 
     def take_damage(self, damage):
-        # 몬스터가 호출하는 피해 처리기: 체력 차감 및 사망 체크
         try:
             self.health -= damage
         except Exception:
@@ -435,43 +434,52 @@ class Main_character:
         print(f"Player took {damage} dmg. HP={self.health}")
         if self.health <= 0:
             print("Player died")
-            # 필요하면 상태 전환(사망 애니 등) 추가
 
     def handle_event(self, event):
-        if event.type == SDL_KEYDOWN:
-            if event.key == SDLK_UP:
+        # keyboard events from sdl2
+        try:
+            from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE
+        except Exception:
+            pass
+        if getattr(event, 'type', None) == SDL_KEYDOWN:
+            key = getattr(event, 'key', None)
+            if key == SDLK_UP:
                 self.key_map['UP'] = True
                 self.dir = 'UP'
-            elif event.key == SDLK_DOWN:
+            elif key == SDLK_DOWN:
                 self.key_map['DOWN'] = True
                 self.dir = 'DOWN'
-            elif event.key == SDLK_LEFT:
+            elif key == SDLK_LEFT:
                 self.key_map['LEFT'] = True
                 self.dir = 'LEFT'
-            elif event.key == SDLK_RIGHT:
+            elif key == SDLK_RIGHT:
                 self.key_map['RIGHT'] = True
                 self.dir = 'RIGHT'
-            elif event.key == SDLK_SPACE:
-                self.state_machine.handle_state_event(('SPACE', None))
-            elif event.key == SDLK_a:
+            elif key == SDLK_SPACE:
+                try:
+                    self.state_machine.handle_state_event(('SPACE', None))
+                except Exception:
+                    pass
+            elif key == SDLK_a:
                 now = time.time()
                 if self.state_machine.cur_state is self.ATTACK:
-                    # 공격 중 재입력은 체인 요청으로 표시
                     self.next_attack_request = True
                 else:
-                    # 이전 공격이 끝난지 1초 이내면 2타로 시작, 아니면 1타
                     if now - self.last_attack_end_time <= self.attack_combo_window:
                         self.attack_stage = 2
                     else:
                         self.attack_stage = 1
-                    self.state_machine.handle_state_event(('ATTACK', None))
-
-        elif event.type == SDL_KEYUP:
-            if event.key == SDLK_UP:
+                    try:
+                        self.state_machine.handle_state_event(('ATTACK', None))
+                    except Exception:
+                        pass
+        elif getattr(event, 'type', None) == SDL_KEYUP:
+            key = getattr(event, 'key', None)
+            if key == SDLK_UP:
                 self.key_map['UP'] = False
-            elif event.key == SDLK_DOWN:
+            elif key == SDLK_DOWN:
                 self.key_map['DOWN'] = False
-            elif event.key == SDLK_LEFT:
+            elif key == SDLK_LEFT:
                 self.key_map['LEFT'] = False
-            elif event.key == SDLK_RIGHT:
+            elif key == SDLK_RIGHT:
                 self.key_map['RIGHT'] = False
