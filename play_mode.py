@@ -43,6 +43,8 @@ def init():
     if UI is not None:
         try:
             ui = UI()
+            # 플레이어 참조를 UI에 전달해서 HP/돈 등을 직접 읽게 함
+            ui.set_player(player)
             game_world.add_object(ui, 2)
         except Exception:
             ui = None
@@ -100,13 +102,6 @@ def handle_events():
 def update(dt):
     # 플레이어 업데이트
     player.update(dt)
-
-    # UI 동기화 (player.money가 없으면 0 사용)
-    if ui is not None:
-        try:
-            ui.set_money(getattr(player, 'money', 0))
-        except Exception:
-            pass
 
     for m in monsters:
         # play_mode가 실행 중이라는 것은 인벤토리가 닫힌 상태
