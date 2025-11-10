@@ -1,7 +1,7 @@
 from pico2d import *
 import game_framework
 #import play_mode
-import play_mode as start_mode
+import shop_mode as start_mode
 
 # 스크린 크기는 main_chracter 모듈에서 가져옴
 import main_chracter

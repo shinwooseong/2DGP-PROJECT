@@ -1,5 +1,7 @@
+# tiled_map.py
 import json
-from pico2d import load_image, load_image
+import os
+from pico2d import load_image, get_canvas_width, get_canvas_height
 
 
 class TiledMap:
@@ -14,81 +16,100 @@ class TiledMap:
         self.map_width_tiles = self.map_data['width']
         self.map_height_tiles = self.map_data['height']
 
-        # 맵의 전체 픽셀 크기
         self.map_width_px = self.map_width_tiles * self.tile_width
         self.map_height_px = self.map_height_tiles * self.tile_height
 
-        # 3. 타일셋 이미지 로드 (첫 번째 타일셋 기준)
+        # (수정) 화면 크기에 맞게 스케일 및 '오프셋' 계산
+        screen_w = get_canvas_width()
+        screen_h = get_canvas_height()
+        self.scale_x = screen_w / self.map_width_px
+        self.scale_y = screen_h / self.map_height_px
+        self.scale = min(self.scale_x, self.scale_y)
+
+        # (추가) 맵이 그려질 실제 크기
+        scaled_map_width = self.map_width_px * self.scale
+        scaled_map_height = self.map_height_px * self.scale
+
+        # (추가) 맵을 중앙에 그리기 위한 오프셋(여백)
+        self.offset_x = (screen_w - scaled_map_width) / 2
+        self.offset_y = (screen_h - scaled_map_height) / 2
+
+        # 3. 타일셋 이미지 로드 ... (기존 코드와 동일)
         tileset_info = self.map_data['tilesets'][0]
         tileset_image_path = tileset_info['image']
-
-        # Tiled는 .json 기준 상대 경로로 저장하므로, 실제 경로를 잘 맞춰야 합니다.
-        # 예: 'map/tileset.png'
+        tileset_image_path = tileset_image_path.replace('\\', '/')
+        map_dir = os.path.dirname(json_path)
+        full_path = os.path.join(map_dir, tileset_image_path)
+        full_path = os.path.normpath(full_path)
         try:
-            self.tileset_image = load_image(tileset_image_path)
+            self.tileset_image = load_image(full_path)
         except:
-            # Tiled가 저장한 경로 그대로 다시 시도
-            print(f"경고: {tileset_image_path} 로드 실패. 상위 폴더에서 다시 시도합니다.")
-            # (만약 map 폴더 안에 json이 있다면)
-            self.tileset_image = load_image(f"../{tileset_image_path}")
-
+            try:
+                self.tileset_image = load_image(tileset_image_path)
+            except:
+                raise IOError(f"Tileset을 로드할 수 없습니다: {tileset_image_path}")
         self.tileset_cols = tileset_info['columns']
 
-        # 4. 그릴 레이어(들) 데이터 저장
+        # 4. 그릴 레이어(들) 데이터 저장 (기존 코드와 동일)
         self.layers_data = []
         for layer in self.map_data['layers']:
             if layer['type'] == 'tilelayer':
-                self.layers_data.append(layer['data'])  # 타일 ID 리스트
+                self.layers_data.append(layer['data'])
 
     def draw(self):
-        # (카메라 없는 버전)
-        # 맵 전체를 순회하며 타일 그리기
         for layer_data in self.layers_data:
             for y in range(self.map_height_tiles):
                 for x in range(self.map_width_tiles):
-
-                    # 맵 타일 인덱스 (Tiled는 1부터 시작, 0은 '빈 타일')
-                    # Tiled 맵은 y=0이 위쪽이므로 그릴 때 y좌표를 뒤집어줍니다.
+                    # ... (타일 ID 및 src_x, src_y 계산은 동일)
                     map_index = (self.map_height_tiles - 1 - y) * self.map_width_tiles + x
                     tile_id = layer_data[map_index]
-
-                    if tile_id == 0:
-                        continue  # 빈 타일은 그리지 않음
-
-                    # 타일셋에서 (src_x, src_y) 계산 (Tiled ID는 1부터 시작)
+                    if tile_id == 0: continue
                     src_x = ((tile_id - 1) % self.tileset_cols) * self.tile_width
                     src_y = ((tile_id - 1) // self.tileset_cols) * self.tile_height
-                    # (Pico2D는 y가 아래 기준이므로 타일셋 y좌표 뒤집기)
                     src_y = self.tileset_image.h - src_y - self.tile_height
 
-                    # 맵에서의 타일 월드 좌표 (중심점 기준)
-                    # 맵이 화면에 꽉 차므로, 월드 좌표 = 화면 좌표
-                    dest_x = x * self.tile_width + self.tile_width // 2
-                    dest_y = y * self.tile_height + self.tile_height // 2
+                    # (수정) 맵 좌표에 스케일과 '오프셋'을 모두 적용
+                    dest_x = (x * self.tile_width + self.tile_width // 2) * self.scale + self.offset_x
+                    dest_y = (y * self.tile_height + self.tile_height // 2) * self.scale + self.offset_y
 
                     self.tileset_image.clip_draw(
                         src_x, src_y, self.tile_width, self.tile_height,
-                        dest_x, dest_y
+                        dest_x, dest_y,
+                        self.tile_width * self.scale, self.tile_height * self.scale
                     )
 
     def get_collision_boxes(self):
-        # Tiled에서 'Collisions'라는 이름의 'Object Layer'를 찾음
+        """Collisions 레이어(objectgroup)에서 충돌 박스 추출"""
         boxes = []
-        for layer in self.map_data['layers']:
-            if layer['type'] == 'objectgroup' and layer['name'] == 'Collisions':
-                for obj in layer['objects']:
-                    # (Tiled는 y=0이 위쪽이므로 y좌표 변환)
-                    tiled_y = obj['y']
-                    tiled_height = obj['height']
-                    pico2d_y = self.map_height_px - tiled_y - tiled_height
 
-                    # (left, bottom, right, top) 형태로 저장
-                    boxes.append((
-                        obj['x'],
-                        pico2d_y,
-                        obj['x'] + obj['width'],
-                        pico2d_y + obj['height']
-                    ))
+        # 'Collisions' objectgroup 찾기
+        for layer in self.map_data['layers']:
+            if layer.get('name') == 'Collisions' and layer['type'] == 'objectgroup':
+                for obj in layer.get('objects', []):
+                    # 객체의 좌표와 크기 (Tiled에서는 y=0이 위쪽)
+                    x = obj['x']
+                    y = obj['y']
+                    width = obj['width']
+                    height = obj['height']
+
+                    # Tiled 좌표계: y=0이 위쪽, 아래로 갈수록 y 증가
+                    # Pico2D 좌표계: y=0이 아래쪽, 위로 갈수록 y 증가
+                    # 변환: pico2d_y = (map_height - tiled_y - object_height)
+                    # 하지만 objectgroup의 Y는 이미 위쪽 기준이므로 직접 계산
+                    pico2d_bottom = self.map_height_px - y - height
+                    pico2d_top = self.map_height_px - y
+
+                    # 스케일 적용하여 충돌 박스 저장 (left, bottom, right, top)
+                    # 오프셋도 함께 적용
+                    left = x * self.scale + self.offset_x
+                    bottom = pico2d_bottom * self.scale + self.offset_y
+                    right = (x + width) * self.scale + self.offset_x
+                    top = pico2d_top * self.scale + self.offset_y
+
+                    boxes.append((left, bottom, right, top))
+                    print(f"충돌 박스 추가: x={x}, y={y}, w={width}, h={height} -> Pico2D: ({left:.1f}, {bottom:.1f}, {right:.1f}, {top:.1f})")
+                break
+
         return boxes
 
     def update(self, dt):
