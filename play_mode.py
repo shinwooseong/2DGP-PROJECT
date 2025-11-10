@@ -114,6 +114,7 @@ def update(dt):
         m.update(dt, frozen=False, player=player)
 
     # 플레이어 공격 히트 처리
+    # 이거 수정해야함 -> getbb 함수 만들어서 충돌 처리 완전히 바꿔야함..
     if getattr(player, 'attack_hit_pending', False):
         pr = getattr(player, 'attack_range', 80)
         for m in monsters:
