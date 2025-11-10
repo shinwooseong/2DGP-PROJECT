@@ -1,4 +1,5 @@
 from pico2d import *
+import pico2d as _pico2d # set_color를 사용하기 위해 유지
 from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u
 
 import game_framework
@@ -6,13 +7,16 @@ import game_world
 
 from main_chracter import Main_character
 from tiled_map import TiledMap
+from UI import UI
+import inventory
 
 player: Main_character = None
 tiled_map: TiledMap = None
+ui = None
 collision_boxes = []  # 충돌 영역 (레이어 1: Collisions)
 
 def init():
-    global player, tiled_map, collision_boxes
+    global player, tiled_map, collision_boxes, ui
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/shop.json')
@@ -25,11 +29,16 @@ def init():
     player.x = 500  # 시작 X 좌표
     player.y = 150  # 시작 Y 좌표
 
+    # 3.5 UI 생성 및 등록 (try...except 제거)
+    ui = UI()
+    ui.set_player(player)
+    game_world.add_object(ui, 2)
+
     # 4. 게임 월드에 객체 추가
     game_world.add_object(tiled_map, 0)  # 배경 레이어
     game_world.add_object(player, 1)     # 플레이어 레이어
 
-    # 디버그 정보 출력
+    # 디버그 정보 출력 (유지)
     print(f"======> 로드된 충돌 상자 개수: {len(collision_boxes)}")
     print(f"맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px} 픽셀")
     print(f"스케일: {tiled_map.scale}")
@@ -41,9 +50,11 @@ def init():
             print(f"  박스 {i}: {box}")
 
 def finish():
-    game_world.clear() # 상점 나가서 다른 모드 진입시 모든 객체 지우기!
-    global collision_boxes
+    # 상점 나가면 UI 포함 모든 객체 제거
+    game_world.clear()
+    global collision_boxes, ui
     collision_boxes = []
+    ui = None
 
 def handle_events():
     events = get_events()
@@ -54,13 +65,10 @@ def handle_events():
             if event.key == SDLK_ESCAPE:
                 game_framework.quit()
             elif event.key == SDLK_u:
-                from inventory import inventory_mode
-                game_framework.push_mode(inventory_mode)
+                game_framework.push_mode(inventory)
             else:
-                # (수정) 모드가 처리하지 않은 키만 플레이어에게 전달
                 player.handle_event(event)
         else:
-            # (수정) 키다운이 아닌 이벤트(예: KEYUP)도 플레이어에게 전달
             player.handle_event(event)
 
 def check_collision(x, y, player_radius=15):
@@ -81,18 +89,29 @@ def update(dt):
     # 플레이어 업데이트
     player.update(dt)
 
+    # UI 업데이트 (try...except 제거)
+    if ui is not None:
+        ui.update(dt)
+
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
     if check_collision(player.x, player.y):
         player.x = prev_x
         player.y = prev_y
 
-    # (수정) 테스트용 종료 코드 (play_mode가 없으므로)
-    if player.y < 10 or player.x > 1200: # (화면 가장자리로 나가면)
+    # 테스트용 종료 코드
+    if player.y < 10 or player.x > 1200:
         game_framework.quit()
 
 def draw():
     clear_canvas()
     game_world.render()
+
+    # 충돌 박스들을 하얀색 테두리로 화면에 표시
+    for box in collision_boxes:
+        left, bottom, right, top = box
+        draw_rectangle(left, bottom, right, top)
+
+
     update_canvas()
 
 def pause(): pass
