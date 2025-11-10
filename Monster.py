@@ -276,6 +276,12 @@ class Animator:
                     self.frame = frames - 1
                     self._death_done = True
                     break
+            elif self.state == 'damaged':
+                # damaged 애니메이션이 끝나면 idle로 돌아감
+                if self.frame >= frames:
+                    self.frame = 0
+                    self.state = 'idle'
+                    break
             else:
                 self.frame %= frames
 
@@ -513,23 +519,29 @@ class Monster:
         self.state = self.animator.state
 
     def update(self, dt=0.01, frozen=False, player=None):
-        if frozen or not self.alive:
+        # death 애니메이션 중일 때는 계속 업데이트
+        if frozen and self.alive:
             return
-        chased = False
-        try:
-            chased = self.ai.update(self, dt, player)
-        except Exception:
+
+        # alive 상태일 때만 AI 업데이트
+        if self.alive:
             chased = False
-        if not chased and getattr(self.ai, 'patrol_width', 0) > 0 and self.speed != 0:
-            self.x += self.speed * self.dir * dt
-            left = self.ai.patrol_origin_x - self.ai.patrol_width / 2
-            right = self.ai.patrol_origin_x + self.ai.patrol_width / 2
-            if self.x < left:
-                self.x = left
-                self.dir = 1
-            elif self.x > right:
-                self.x = right
-                self.dir = -1
+            try:
+                chased = self.ai.update(self, dt, player)
+            except Exception:
+                chased = False
+            if not chased and getattr(self.ai, 'patrol_width', 0) > 0 and self.speed != 0:
+                self.x += self.speed * self.dir * dt
+                left = self.ai.patrol_origin_x - self.ai.patrol_width / 2
+                right = self.ai.patrol_origin_x + self.ai.patrol_width / 2
+                if self.x < left:
+                    self.x = left
+                    self.dir = 1
+                elif self.x > right:
+                    self.x = right
+                    self.dir = -1
+
+        # 항상 애니메이터 업데이트 (death 애니메이션도 진행되어야 함)
         self.animator.update(dt)
         self.state = self.animator.state
         frames = int(self.animator.frames_map.get(self.animator.state, 1))
@@ -543,6 +555,9 @@ class Monster:
                 self.combat.clear()
 
     def draw(self):
+        if not self.alive and self.animator._death_done:
+            # death 애니메이션이 완료되면 화면에 표시하지 않음
+            return
         self.animator.draw(self.x, self.y, getattr(self, 'scale', 1.0))
 
     def take_damage(self, dmg):
@@ -572,7 +587,7 @@ class Green_MS(Monster):
     def __init__(self, x=200, y=140):
         super().__init__(name='green_ms', x=x, y=y, hp=80, speed=30)
         frames_map = {'idle': 5, 'attack': 11, 'damaged': 2, 'death': 5}
-        frame_time = {'idle': 0.12, 'attack': 0.07, 'damaged': 0.08, 'death': 0.10}
+        frame_time = {'idle': 0.12, 'attack': 0.07, 'damaged': 0.08, 'death': 0.15}
         self.animator = Animator('MS/green_ms', frames_map, frame_time)
         self.combat = Combat(attack_power=15, attack_range=120, cooldown=1.0, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=120, sight_range=400)
@@ -592,7 +607,7 @@ class Trash_Monster(Monster):
             'attack': 6,
             'death': 3,
         }
-        frame_time = {'idle': 0.1, 'sleep': 0.1, 'damaged1': 0.08, 'damaged2': 0.08, 'attack': 0.07, 'death': 0.1}
+        frame_time = {'idle': 0.1, 'sleep': 0.1, 'damaged1': 0.08, 'damaged2': 0.08, 'attack': 0.07, 'death': 0.2}
         self.animator = Animator('', frames_map, frame_time, layout='grid', single_image_path=sheet_path)
         self.combat = Combat(attack_power=10, attack_range=50, cooldown=1.5, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=300)
@@ -635,7 +650,7 @@ class Red_MS(Monster):
         # per-state images are in MS/red_magic_ms/{idle,attack,damaged,death}.png
         # each state's image has frames stacked vertically
         frames_map = {'idle': 5, 'attack': 8, 'damaged': 2, 'death': 5}
-        frame_time = {'idle': 0.11, 'attack': 0.06, 'damaged': 0.09, 'death': 0.10}
+        frame_time = {'idle': 0.11, 'attack': 0.06, 'damaged': 0.09, 'death': 0.15}
         # use vertical layout so each state's PNG is interpreted as vertically stacked frames
         self.animator = Animator('MS/red_magic_ms', frames_map, frame_time, layout='vertical')
         self.combat = Combat(attack_power=15, attack_range=90, cooldown=1.0, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)

@@ -39,6 +39,7 @@ def init():
         Green_MS(600, 200),
         Trash_Monster(100, 100),
         Red_MS(500, 150),
+        #Blue_MS(300, 250)
     ]
     game_world.add_objects(monsters, 1)  # layer 1
 
