@@ -40,5 +40,27 @@ def finish():
     global collision_boxes
     collision_boxes = []
 
+def handle_events():
+    events =get_events()
+    for event in events:
+        if event.type == SDL_QUIT:
+            game_framework.quit()
+        else:
+            player.handle_event(event)
+
+def update(dt):
+    player.update(dt)
+
+    if player.y < 10 or player.x >300:  # 상점 문 위치에 따라 조정 필요
+        game_framework.change_mode(play_mode)
+
+
+def draw():
+    clear_canvas()
+    game_world.render()
+    update_canvas()
+
+def pause(): pass
+def resume(): pass
 
 
