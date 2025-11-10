@@ -22,7 +22,7 @@ def init():
 
     # 3. 플레이어 생성 및 초기 위치 설정
     player = Main_character()
-    player.x = 200  # 시작 X 좌표
+    player.x = 500  # 시작 X 좌표
     player.y = 150  # 시작 Y 좌표
 
     # 4. 게임 월드에 객체 추가
@@ -74,10 +74,17 @@ def check_collision(x, y, player_radius=15):
     return False
 
 def update(dt):
-    # (수정) 플레이어 업데이트만 호출합니다.
-    # (충돌 처리는 player.update -> player_states.py 내부에서
-    #  shop_mode.collision_boxes를 참조하여 '미리' 막아줍니다.)
+    # 이전 위치 저장
+    prev_x = player.x
+    prev_y = player.y
+
+    # 플레이어 업데이트
     player.update(dt)
+
+    # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
+    if check_collision(player.x, player.y):
+        player.x = prev_x
+        player.y = prev_y
 
     # (수정) 테스트용 종료 코드 (play_mode가 없으므로)
     if player.y < 10 or player.x > 1200: # (화면 가장자리로 나가면)
@@ -86,16 +93,6 @@ def update(dt):
 def draw():
     clear_canvas()
     game_world.render()
-
-    # 디버그: 충돌 박스 시각화
-    for i, box in enumerate(collision_boxes):
-        left, bottom, right, top = box
-        # 사각형 그리기 (빨간색)
-        draw_rectangle(left, bottom, right, top)
-
-    # 플레이어 위치 표시 (녹색)
-    draw_circle(player.x, player.y, 15)
-
     update_canvas()
 
 def pause(): pass
