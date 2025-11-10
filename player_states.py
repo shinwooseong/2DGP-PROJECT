@@ -40,11 +40,13 @@ class Idle:
 
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.idle_y_offsets[self.character.dir]
+        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정 (SPRITE_H / 2 만큼 위로 이동)
+        draw_y = self.character.y + SPRITE_H // 2
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
             self.character.x,
-            self.character.y,
+            draw_y,
         )
 
 
@@ -96,11 +98,13 @@ class Walk:
 
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.run_y_offsets[self.character.dir]
+        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + SPRITE_H // 2
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
             self.character.x,
-            self.character.y,
+            draw_y,
         )
 
 
@@ -159,11 +163,13 @@ class Roll:
 
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.run_y_offsets[self.character.dir]
+        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + SPRITE_H // 2
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
             self.character.x,
-            self.character.y,
+            draw_y,
         )
 
 
@@ -250,8 +256,10 @@ class Attack:
         frame_idx = int(self.frame) % frames
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.attack_y_offsets[self.stage][self.character.dir]
+        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + SPRITE_H // 2
         img.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
-            self.character.x, self.character.y
+            self.character.x, draw_y
         )
