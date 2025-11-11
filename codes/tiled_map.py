@@ -34,20 +34,35 @@ class TiledMap:
         self.offset_x = (screen_w - scaled_map_width) / 2
         self.offset_y = (screen_h - scaled_map_height) / 2
 
-        # 3. 타일셋 이미지 로드 ... (기존 코드와 동일)
+        # 3. 타일셋 이미지 로드
         tileset_info = self.map_data['tilesets'][0]
         tileset_image_path = tileset_info['image']
         tileset_image_path = tileset_image_path.replace('\\', '/')
+
+        # 파일명만 추출
+        image_filename = os.path.basename(tileset_image_path)
         map_dir = os.path.dirname(json_path)
-        full_path = os.path.join(map_dir, tileset_image_path)
-        full_path = os.path.normpath(full_path)
-        try:
-            self.tileset_image = load_image(full_path)
-        except:
+
+        # 여러 경로를 시도
+        paths_to_try = [
+            os.path.join(map_dir, tileset_image_path),  # 원본 경로
+            os.path.join(map_dir, image_filename),  # 같은 폴더
+            tileset_image_path,  # 상대 경로 그대로
+            image_filename  # 파일명만
+        ]
+
+        self.tileset_image = None
+        for path in paths_to_try:
             try:
-                self.tileset_image = load_image(tileset_image_path)
+                normalized_path = os.path.normpath(path)
+                self.tileset_image = load_image(normalized_path)
+                break
             except:
-                raise IOError(f"Tileset을 로드할 수 없습니다: {tileset_image_path}")
+                continue
+
+        if self.tileset_image is None:
+            raise IOError(f"Tileset을 로드할 수 없습니다. 시도한 경로들: {paths_to_try}")
+
         self.tileset_cols = tileset_info['columns']
 
         # 4. 그릴 레이어(들) 데이터 저장 (기존 코드와 동일)
