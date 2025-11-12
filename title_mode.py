@@ -4,6 +4,7 @@ from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_SPACE, SDLK_k
 import game_framework
 import play_mode # 다음 모드인 play_mode를 임포트합니다.
 import main_chracter
+import shop_mode
 
 image = None
 
@@ -38,7 +39,7 @@ def handle_events():
             if event.key == SDLK_ESCAPE:
                 game_framework.quit()
             elif event.key == SDLK_k:
-                game_framework.change_mode(play_mode)
+                game_framework.change_mode(shop_mode)
 
 def pause(): pass
 def resume(): pass
