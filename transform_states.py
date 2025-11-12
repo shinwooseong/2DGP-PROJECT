@@ -1,6 +1,6 @@
 import time
 from pico2d import load_image
-from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H, TRANSFORM_FOOT_OFFSET_Y
 
 # 몸집이 작아서 속도가 더 빠름
 SCREEN_W, SCREEN_H = 1280, 736
@@ -42,8 +42,8 @@ class TransformIdle:
         x_offset = frame_idx * TRANSFORM_SPRITE_W
         img_height = image.h
 
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + TRANSFORM_SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':
@@ -112,8 +112,8 @@ class TransformWalk:
         x_offset = frame_idx * TRANSFORM_SPRITE_W
         img_height = image.h
 
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + TRANSFORM_SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':
@@ -185,8 +185,8 @@ class TransformRoll:
         x_offset = frame_idx * TRANSFORM_SPRITE_W
         img_height = image.h
 
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + TRANSFORM_SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':
@@ -303,8 +303,8 @@ class TransformAttack:
         x_offset = frame_idx * TRANSFORM_SPRITE_W
         img_height = img.h
 
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + TRANSFORM_SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':

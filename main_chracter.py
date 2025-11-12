@@ -1,5 +1,5 @@
 import time
-from pico2d import load_image
+from pico2d import load_image, draw_rectangle
 from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE, SDLK_x
 
 from state_machine import StateMachine
@@ -7,7 +7,7 @@ import player_loader
 import player_states
 import transform_loader
 import transform_states
-from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H, TRANSFORM_FOOT_OFFSET_Y
 
 
 SCREEN_W, SCREEN_H = 1280, 736
@@ -200,8 +200,8 @@ class Main_character:
             x_offset = frame_idx * TRANSFORM_SPRITE_W
             img_height = image.h
 
-            # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-            draw_y = self.y + TRANSFORM_SPRITE_H // 2
+            # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+            draw_y = self.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
 
             # 왼쪽 방향이면 이미지 좌우 반전
             if self.dir == 'LEFT':
@@ -214,10 +214,44 @@ class Main_character:
                     x_offset, 0, TRANSFORM_SPRITE_W, img_height,
                     self.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
                 )
+
+            # 디버그: 빨간 박스로 그려지는 영역 표시
+            draw_rectangle(
+                self.x - TRANSFORM_SPRITE_W // 2,
+                draw_y - TRANSFORM_SPRITE_H // 2,
+                self.x + TRANSFORM_SPRITE_W // 2,
+                draw_y + TRANSFORM_SPRITE_H // 2
+            )
+            # 발 위치 표시 (노란색 작은 점)
+            draw_rectangle(self.x - 2, self.y - 2, self.x + 2, self.y + 2)
             return
 
         try:
             self.state_machine.draw()
+
+            # 디버그: 빨간 박스로 그려지는 영역 표시
+            if self.is_transformed:
+                # 변신 상태일 때는 transform_states의 draw_y 계산 재현
+                draw_y = self.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+                draw_rectangle(
+                    self.x - TRANSFORM_SPRITE_W // 2,
+                    draw_y - TRANSFORM_SPRITE_H // 2,
+                    self.x + TRANSFORM_SPRITE_W // 2,
+                    draw_y + TRANSFORM_SPRITE_H // 2
+                )
+            else:
+                # 기본 상태일 때는 player_states의 draw_y 계산 재현
+                from player_loader import FOOT_OFFSET_Y
+                draw_y = self.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
+                draw_rectangle(
+                    self.x - SPRITE_W // 2,
+                    draw_y - SPRITE_H // 2,
+                    self.x + SPRITE_W // 2,
+                    draw_y + SPRITE_H // 2
+                )
+
+            # 발 위치 표시 (노란색 작은 점)
+            draw_rectangle(self.x - 2, self.y - 2, self.x + 2, self.y + 2)
         except Exception:
             pass
 
@@ -280,4 +314,3 @@ class Main_character:
                 self.key_map['LEFT'] = False
             elif key == SDLK_RIGHT:
                 self.key_map['RIGHT'] = False
-

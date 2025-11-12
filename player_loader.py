@@ -1,6 +1,9 @@
 from pico2d import load_image
 
 SPRITE_W, SPRITE_H = 96, 80
+# 기본 캐릭터의 발 오프셋 (스프라이트 바닥에서 실제 발까지의 거리)
+# 실제 캐릭터는 스프라이트 하단 부분에만 그려져 있음
+FOOT_OFFSET_Y = 30  # 실제 발은 스프라이트 중앙보다 훨씬 아래에 위치
 
 
 class PlayerLoader:

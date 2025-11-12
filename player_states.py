@@ -1,5 +1,6 @@
 import time
 from pico2d import load_image
+from player_loader import FOOT_OFFSET_Y
 
 SCREEN_W, SCREEN_H = 1280, 720
 SPRITE_W, SPRITE_H = 96, 80
@@ -40,8 +41,8 @@ class Idle:
 
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.idle_y_offsets[self.character.dir]
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정 (SPRITE_H / 2 만큼 위로 이동)
-        draw_y = self.character.y + SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
@@ -98,8 +99,8 @@ class Walk:
 
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.run_y_offsets[self.character.dir]
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
@@ -163,8 +164,8 @@ class Roll:
 
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.run_y_offsets[self.character.dir]
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
@@ -256,8 +257,8 @@ class Attack:
         frame_idx = int(self.frame) % frames
         x_offset = frame_idx * SPRITE_W
         y_offset = loader.attack_y_offsets[self.stage][self.character.dir]
-        # 발(아래쪽)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + SPRITE_H // 2
+        # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
+        draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
         img.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,

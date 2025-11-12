@@ -3,6 +3,9 @@ from pico2d import load_image
 # 변신 캐릭터의 실제 프레임 크기
 TRANSFORM_SPRITE_W = 144
 TRANSFORM_SPRITE_H = 144
+# 변신 캐릭터의 발 오프셋 (스프라이트 바닥에서 실제 발까지의 거리)
+# 실제 캐릭터는 스프라이트 하단 부분에만 그려져 있음
+TRANSFORM_FOOT_OFFSET_Y = 65  # 144x144 스프라이트에서 실제 캐릭터는 하단에만 위치
 
 class TransformLoader:
     """변신 캐릭터 이미지 로더 (좌우만 지원, 상하 없음)"""
