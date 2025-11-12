@@ -1,6 +1,6 @@
 from pico2d import *
 import pico2d as _pico2d # set_color를 사용하기 위해 유지
-from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u
+from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u, SDLK_RETURN
 
 import game_framework
 import game_world
@@ -66,6 +66,10 @@ def handle_events():
                 game_framework.quit()
             elif event.key == SDLK_u:
                 game_framework.push_mode(inventory)
+            elif event.key == SDLK_RETURN:
+                # ENTER 키를 누르면 dungeon_mode로 전환
+                import dungeon_mode
+                game_framework.change_mode(dungeon_mode)
             else:
                 player.handle_event(event)
         else:

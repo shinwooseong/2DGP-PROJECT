@@ -1,6 +1,6 @@
 from pico2d import *
 import pico2d as _pico2d
-from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u
+from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u, SDLK_RETURN
 import random
 
 import game_framework
@@ -130,6 +130,10 @@ def handle_events():
                 game_framework.quit()
             elif event.key == SDLK_u:
                 game_framework.push_mode(inventory)
+            elif event.key == SDLK_RETURN:
+                # ENTER 키를 누르면 shop_mode로 전환
+                import shop_mode
+                game_framework.change_mode(shop_mode)
             else:
                 player.handle_event(event)
         else:
