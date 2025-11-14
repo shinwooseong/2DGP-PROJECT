@@ -285,6 +285,10 @@ class Animator:
             else:
                 self.frame %= frames
 
+    # 'death' 애니메이션 끝나야지만, 죽음 처리되게
+    def is_animation_finished(self):
+        return self.state == 'death' and self._death_done
+
     def draw(self, x, y, scale=1.0):
         frames = int(self.frames_map.get(self.state, 1))
         if self.sheet_image is not None:
@@ -518,6 +522,9 @@ class Monster:
         self.ai = SimpleAI()
         self.state = self.animator.state
 
+        # 공격 범위 표시 플래그
+        self.show_attack_range = True
+
     def update(self, dt=0.01, frozen=False, player=None):
         # death 애니메이션 중일 때는 계속 업데이트
         if frozen and self.alive:
@@ -526,20 +533,22 @@ class Monster:
         # alive 상태일 때만 AI 업데이트
         if self.alive:
             chased = False
-            try:
-                chased = self.ai.update(self, dt, player)
-            except Exception:
-                chased = False
-            if not chased and getattr(self.ai, 'patrol_width', 0) > 0 and self.speed != 0:
-                self.x += self.speed * self.dir * dt
-                left = self.ai.patrol_origin_x - self.ai.patrol_width / 2
-                right = self.ai.patrol_origin_x + self.ai.patrol_width / 2
-                if self.x < left:
-                    self.x = left
-                    self.dir = 1
-                elif self.x > right:
-                    self.x = right
-                    self.dir = -1
+            # 공격 중이 아닐 때만 AI로 이동
+            if self.animator.state != 'attack':
+                try:
+                    chased = self.ai.update(self, dt, player)
+                except Exception:
+                    chased = False
+                if not chased and getattr(self.ai, 'patrol_width', 0) > 0 and self.speed != 0:
+                    self.x += self.speed * self.dir * dt
+                    left = self.ai.patrol_origin_x - self.ai.patrol_width / 2
+                    right = self.ai.patrol_origin_x + self.ai.patrol_width / 2
+                    if self.x < left:
+                        self.x = left
+                        self.dir = 1
+                    elif self.x > right:
+                        self.x = right
+                        self.dir = -1
 
         # 항상 애니메이터 업데이트 (death 애니메이션도 진행되어야 함)
         self.animator.update(dt)
@@ -551,13 +560,14 @@ class Monster:
         new = int(self.animator.frame)
         if self.animator.state == 'attack':
             self.combat.apply_hit_if_needed(prev, new, self)
-            if new >= frames:
-                self.combat.clear()
+
 
     def draw(self):
+        # death 애니메이션이 완전히 끝난 후에만 화면에서 제거
         if not self.alive and self.animator._death_done:
-            # death 애니메이션이 완료되면 화면에 표시하지 않음
             return
+
+        # alive이거나, death 애니메이션 진행 중이면 계속 그리기
         self.animator.draw(self.x, self.y, getattr(self, 'scale', 1.0))
 
     def take_damage(self, dmg):
@@ -573,6 +583,21 @@ class Monster:
             # generic damaged state if exists
             if 'damaged' in self.animator.frames_map:
                 self.animator.set_state('damaged')
+
+    # 몬스터 공격범위 설정
+    def get_attack_bb(self):
+        # 공격 상태가 아니면 None 반환
+        if self.animator.state != 'attack':
+            return None
+
+        # 공격 범위 -> 수정해야함( 그림범위로 되어있어서 너무 큼 )
+        attack_range = self.combat.attack_range
+        left = self.x - attack_range
+        right = self.x + attack_range
+        bottom = self.y - attack_range
+        top = self.y + attack_range
+
+        return (left, bottom, right, top)
 
     def _in_attack_range(self, target):
         try:

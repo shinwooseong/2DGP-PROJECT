@@ -8,10 +8,11 @@ import player_states
 import transform_loader
 import transform_states
 from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H, TRANSFORM_FOOT_OFFSET_Y
-
-
-SCREEN_W, SCREEN_H = 1280, 736
-SPRITE_W, SPRITE_H = 96, 80
+from character_constants import (
+    SCREEN_W, SCREEN_H, SPRITE_W, SPRITE_H,
+    CHARACTER_COLLISION_W, CHARACTER_COLLISION_H,
+    TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
+)
 
 
 # Idle, Walk, Roll, Attack 클래스 정의 모두 삭제하고 player_states 모듈로 이동
@@ -53,6 +54,9 @@ class Main_character:
 
         # 7. 변신 관련
         self.is_transformed = False  # 변신 상태 플래그
+
+        # 공격 범위 디버그 표시 플래그
+        self.show_attack_bb = True
 
         # 8. 기본 캐릭터 상태 인스턴스 (player_states에서 가져옴)
         self.IDLE = player_states.Idle(self)
@@ -215,12 +219,12 @@ class Main_character:
                     self.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
                 )
 
-            # 디버그: 빨간 박스로 그려지는 영역 표시
+            # 디버그: 실제 충돌 범위 표시 (변신 캐릭터)
             draw_rectangle(
-                self.x - TRANSFORM_SPRITE_W // 2,
-                draw_y - TRANSFORM_SPRITE_H // 2,
-                self.x + TRANSFORM_SPRITE_W // 2,
-                draw_y + TRANSFORM_SPRITE_H // 2
+                self.x - TRANSFORM_COLLISION_W // 2,
+                self.y - TRANSFORM_COLLISION_H // 2,
+                self.x + TRANSFORM_COLLISION_W // 2,
+                self.y + TRANSFORM_COLLISION_H // 2
             )
             # 발 위치 표시 (노란색 작은 점)
             draw_rectangle(self.x - 2, self.y - 2, self.x + 2, self.y + 2)
@@ -229,25 +233,30 @@ class Main_character:
         try:
             self.state_machine.draw()
 
-            # 디버그: 빨간 박스로 그려지는 영역 표시
+            # 공격 범위 표시 (빨간 박스)
+            if self.show_attack_bb:
+                bb = self.get_bb()
+                if bb is not None:
+                    left, bottom, right, top = bb
+                    # 빨간색으로 공격 범위 표시
+                    draw_rectangle(left, bottom, right, top)
+
+            # 디버그: 실제 충돌 범위 표시 (캐릭터 크기에 맞게)
             if self.is_transformed:
-                # 변신 상태일 때는 transform_states의 draw_y 계산 재현
-                draw_y = self.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+                # 변신 상태일 때는 변신 캐릭터 충돌 범위
                 draw_rectangle(
-                    self.x - TRANSFORM_SPRITE_W // 2,
-                    draw_y - TRANSFORM_SPRITE_H // 2,
-                    self.x + TRANSFORM_SPRITE_W // 2,
-                    draw_y + TRANSFORM_SPRITE_H // 2
+                    self.x - TRANSFORM_COLLISION_W // 2,
+                    self.y - TRANSFORM_COLLISION_H // 2,
+                    self.x + TRANSFORM_COLLISION_W // 2,
+                    self.y + TRANSFORM_COLLISION_H // 2
                 )
             else:
-                # 기본 상태일 때는 player_states의 draw_y 계산 재현
-                from player_loader import FOOT_OFFSET_Y
-                draw_y = self.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
+                # 기본 상태일 때는 기본 캐릭터 충돌 범위
                 draw_rectangle(
-                    self.x - SPRITE_W // 2,
-                    draw_y - SPRITE_H // 2,
-                    self.x + SPRITE_W // 2,
-                    draw_y + SPRITE_H // 2
+                    self.x - CHARACTER_COLLISION_W // 2,
+                    self.y - CHARACTER_COLLISION_H // 2,
+                    self.x + CHARACTER_COLLISION_W // 2,
+                    self.y + CHARACTER_COLLISION_H // 2
                 )
 
             # 발 위치 표시 (노란색 작은 점)
@@ -314,3 +323,60 @@ class Main_character:
                 self.key_map['LEFT'] = False
             elif key == SDLK_RIGHT:
                 self.key_map['RIGHT'] = False
+
+    # 캐릭터의 공격범위 만들기
+    def get_bb(self):
+
+        # 공격 상태가 아니면 None 반환
+        if not self.is_transformed:
+            # 기본 캐릭터
+            if self.state_machine.cur_state is not self.ATTACK:
+                return None
+
+            # 방향에 따른 공격 범위 설정 (칼이 뻗는 범위)
+            attack_reach = 60  # 공격 범위
+            attack_width = 40   # 공격 폭
+
+            # 각 방향 별로 각기 적용
+            if self.dir == 'DOWN':
+                return (self.x - attack_width // 2,
+                       self.y - attack_reach,
+                       self.x + attack_width // 2,
+                       self.y)
+            elif self.dir == 'UP':
+                return (self.x - attack_width // 2,
+                       self.y,
+                       self.x + attack_width // 2,
+                       self.y + attack_reach)
+            elif self.dir == 'LEFT':
+                return (self.x - attack_reach,
+                       self.y - attack_width // 2,
+                       self.x,
+                       self.y + attack_width // 2)
+            elif self.dir == 'RIGHT':
+                return (self.x,
+                       self.y - attack_width // 2,
+                       self.x + attack_reach,
+                       self.y + attack_width // 2)
+        else:
+            # 변신 캐릭터
+            if self.state_machine.cur_state is not self.TRANSFORM_ATTACK:
+                return None
+
+            # 변신 캐릭터는 공격 범위가 더 작음
+            # 몸집이 작으니까
+            attack_reach = 40  # 공격 범위
+            attack_width = 30   # 공격 폭
+
+            if self.dir == 'LEFT':
+                return (self.x - attack_reach,
+                       self.y - attack_width // 2,
+                       self.x,
+                       self.y + attack_width // 2)
+            elif self.dir == 'RIGHT':
+                return (self.x,
+                       self.y - attack_width // 2,
+                       self.x + attack_reach,
+                       self.y + attack_width // 2)
+
+        return None

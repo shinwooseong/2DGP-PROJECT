@@ -9,6 +9,7 @@ from main_chracter import Main_character
 from tiled_map import TiledMap
 from UI import UI
 import inventory
+from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
 player: Main_character = None
 tiled_map: TiledMap = None
@@ -75,13 +76,22 @@ def handle_events():
         else:
             player.handle_event(event)
 
-def check_collision(x, y, player_radius=15):
-    """플레이어의 위치가 충돌 박스와 충돌하는지 확인"""
+def check_collision(x, y, player):
+    """플레이어의 위치가 충돌 박스와 충돌하는지 확인 (실제 캐릭터 크기 사용)"""
+
+    # 변신 상태에 따라 다른 충돌 범위 사용
+    if player.is_transformed:
+        collision_w = TRANSFORM_COLLISION_W // 2
+        collision_h = TRANSFORM_COLLISION_H // 2
+    else:
+        collision_w = CHARACTER_COLLISION_W // 2
+        collision_h = CHARACTER_COLLISION_H // 2
+
     for box in collision_boxes:
         left, bottom, right, top = box
-        # 플레이어의 원형 충돌 감지
-        if left - player_radius < x < right + player_radius and \
-           bottom - player_radius < y < top + player_radius:
+        # 플레이어의 사각형 충돌 감지 (실제 캐릭터 크기 사용)
+        if left - collision_w < x < right + collision_w and \
+           bottom - collision_h < y < top + collision_h:
             return True
     return False
 
@@ -98,7 +108,7 @@ def update(dt):
         ui.update(dt)
 
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
-    if check_collision(player.x, player.y):
+    if check_collision(player.x, player.y, player):
         player.x = prev_x
         player.y = prev_y
 

@@ -2,8 +2,13 @@ import time
 from pico2d import load_image
 from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H, TRANSFORM_FOOT_OFFSET_Y
 
+# 실제 충돌 범위 import (순환 import 방지를 위해 character_constants에서 가져옴)
+from character_constants import (
+    SCREEN_W, SCREEN_H,
+    TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
+)
+
 # 몸집이 작아서 속도가 더 빠름
-SCREEN_W, SCREEN_H = 1280, 736
 WALK_SPEED = 180.0
 ROLL_SPEED = 360.0
 ROLL_DISTANCE = 80.0
@@ -99,8 +104,12 @@ class TransformWalk:
             self.character.state_machine.handle_state_event(('STOP', None))
             return
 
-        self.character.x = max(TRANSFORM_SPRITE_W // 2, min(SCREEN_W - TRANSFORM_SPRITE_W // 2, self.character.x + dx))
-        self.character.y = max(TRANSFORM_SPRITE_H // 2, min(SCREEN_H - TRANSFORM_SPRITE_H // 2, self.character.y + dy))
+        # 실제 충돌 범위로 화면 경계 제한 (스프라이트 크기 대신)
+        collision_half_w = TRANSFORM_COLLISION_W // 2
+        collision_half_h = TRANSFORM_COLLISION_H // 2
+
+        self.character.x = max(collision_half_w, min(SCREEN_W - collision_half_w, self.character.x + dx))
+        self.character.y = max(collision_half_h, min(SCREEN_H - collision_half_h, self.character.y + dy))
 
     def draw(self):
         loader = self.character.transform_loader
@@ -163,15 +172,20 @@ class TransformRoll:
         remaining = max(0.0, ROLL_DISTANCE - getattr(self.character, 'roll_moved', 0.0))
         if remaining > 0.0:
             move = min(ROLL_SPEED * dt, remaining)
+
+            # 실제 충돌 범위로 화면 경계 제한
+            collision_half_w = TRANSFORM_COLLISION_W // 2
+            collision_half_h = TRANSFORM_COLLISION_H // 2
+
             if self.character.key_map['UP']:
-                self.character.y = min(SCREEN_H - TRANSFORM_SPRITE_H // 2, self.character.y + move)
+                self.character.y = min(SCREEN_H - collision_half_h, self.character.y + move)
             elif self.character.key_map['DOWN']:
-                self.character.y = max(TRANSFORM_SPRITE_H // 2, self.character.y - move)
+                self.character.y = max(collision_half_h, self.character.y - move)
 
             if self.character.dir == 'LEFT':
-                self.character.x = max(TRANSFORM_SPRITE_W // 2, self.character.x - move)
+                self.character.x = max(collision_half_w, self.character.x - move)
             elif self.character.dir == 'RIGHT':
-                self.character.x = min(SCREEN_W - TRANSFORM_SPRITE_W // 2, self.character.x + move)
+                self.character.x = min(SCREEN_W - collision_half_w, self.character.x + move)
 
             self.character.roll_moved = getattr(self.character, 'roll_moved', 0.0) + move
 
@@ -254,8 +268,12 @@ class TransformAttack:
             dy -= move_speed * dt
 
         if dx != 0.0 or dy != 0.0:
-            self.character.x = max(TRANSFORM_SPRITE_W // 2, min(SCREEN_W - TRANSFORM_SPRITE_W // 2, self.character.x + dx))
-            self.character.y = max(TRANSFORM_SPRITE_H // 2, min(SCREEN_H - TRANSFORM_SPRITE_H // 2, self.character.y + dy))
+            # 실제 충돌 범위로 화면 경계 제한
+            collision_half_w = TRANSFORM_COLLISION_W // 2
+            collision_half_h = TRANSFORM_COLLISION_H // 2
+
+            self.character.x = max(collision_half_w, min(SCREEN_W - collision_half_w, self.character.x + dx))
+            self.character.y = max(collision_half_h, min(SCREEN_H - collision_half_h, self.character.y + dy))
 
         while self.frame_time_acc >= frame_time:
             self.frame_time_acc -= frame_time

@@ -11,6 +11,7 @@ from tiled_map import TiledMap
 from UI import UI
 import inventory
 from Monster import Green_MS, Red_MS, Trash_Monster
+from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
 player: Main_character = None
 tiled_map: TiledMap = None
@@ -139,13 +140,21 @@ def handle_events():
         else:
             player.handle_event(event)
 
-def check_collision(x, y, player_radius=15):
-    """플레이어의 위치가 충돌 박스와 충돌하는지 확인"""
+def check_collision(x, y, player):
+    # 실제 캐릭터 크기를 지정해서 충돌박스 만들기!
+    # 변신 상태에 따라 다른 충돌 범위 사용
+    if player.is_transformed:
+        collision_w = TRANSFORM_COLLISION_W // 2
+        collision_h = TRANSFORM_COLLISION_H // 2
+    else:
+        collision_w = CHARACTER_COLLISION_W // 2
+        collision_h = CHARACTER_COLLISION_H // 2
+
     for box in collision_boxes:
         left, bottom, right, top = box
-        # 플레이어의 원형 충돌 감지
-        if left - player_radius < x < right + player_radius and \
-           bottom - player_radius < y < top + player_radius:
+        # 플레이어의 사각형 충돌 감지 (실제 캐릭터 크기 사용)
+        if left - collision_w < x < right + collision_w and \
+           bottom - collision_h < y < top + collision_h:
             return True
     return False
 
@@ -158,22 +167,48 @@ def update(dt):
     player.update(dt)
 
     # 몬스터 업데이트
-    for monster in monsters:
-        if monster.alive:
-            monster.update(dt, frozen=False, player=player)
-        else:
-            # 죽은 몬스터는 death 애니메이션이 끝나면 제거
-            if hasattr(monster, 'animator') and monster.animator.state == 'death':
-                if monster.animator.is_animation_finished():
-                    game_world.remove_object(monster)
-                    monsters.remove(monster)
+    for monster in monsters[:]:  # 복사본으로 순회하여 안전하게 제거
+        # 살아있거나 death 애니메이션 중이면 업데이트
+        monster.update(dt, frozen=False, player=player)
+
+        # death 애니메이션이 완전히 끝난 몬스터만 제거
+        if not monster.alive and monster.animator.is_animation_finished():
+            game_world.remove_object(monster)
+            monsters.remove(monster)
+            print(f"{monster.name} 제거 완료")
+
+    # 플레이어 공격 충돌 처리
+    player_attack_bb = player.get_bb()
+    if player_attack_bb is not None and hasattr(player, 'attack_hit_pending') and player.attack_hit_pending:
+        left, bottom, right, top = player_attack_bb
+        for monster in monsters[:]:  # 복사본으로 순회
+            if not monster.alive:
+                continue
+
+            # 몬스터의 충돌 범위 계산
+            # 몬스터 크기는 스프라이트 크기에 따라 가정해서 일단 구함 -> 수정할 것
+            monster_size = monster.scale * 25  # 반지름
+            monster_left = monster.x - monster_size
+            monster_right = monster.x + monster_size
+            monster_bottom = monster.y - monster_size
+            monster_top = monster.y + monster_size
+
+            # 사각형 충돌 감지
+            if not (left > monster_right or right < monster_left or
+                    bottom > monster_top or top < monster_bottom):
+                monster.take_damage(player.attack)
+                print(f"플레이어가 {monster.name}에게 {player.attack} 데미지!")
+
+        # 한 번만 데미지 주기
+        player.attack_hit_pending = False
 
     # UI 업데이트
     if ui is not None:
         ui.update(dt)
 
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
-    if check_collision(player.x, player.y):
+    # 즉, 벽에 닿으면 벽 앞에서만 움직이는 효과
+    if check_collision(player.x, player.y, player):
         player.x = prev_x
         player.y = prev_y
 
@@ -185,6 +220,14 @@ def draw():
     for box in collision_boxes:
         left, bottom, right, top = box
         draw_rectangle(left, bottom, right, top)
+
+    # 몬스터들의 공격 범위 표시
+    for monster in monsters:
+        if monster.alive and monster.show_attack_range:
+            attack_bb = monster.get_attack_bb()
+            if attack_bb is not None:
+                left, bottom, right, top = attack_bb
+                draw_rectangle(left, bottom, right, top)
 
     update_canvas()
 
