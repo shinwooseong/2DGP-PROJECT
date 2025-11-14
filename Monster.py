@@ -675,10 +675,10 @@ class Red_MS(Monster):
         # per-state images are in MS/red_magic_ms/{idle,attack,damaged,death}.png
         # each state's image has frames stacked vertically
         frames_map = {'idle': 5, 'attack': 8, 'damaged': 2, 'death': 5}
-        frame_time = {'idle': 0.11, 'attack': 0.06, 'damaged': 0.09, 'death': 0.15}
+        frame_time = {'idle': 0.11, 'attack': 0.03, 'damaged': 0.09, 'death': 0.15}
         # use vertical layout so each state's PNG is interpreted as vertically stacked frames
         self.animator = Animator('MS/red_magic_ms', frames_map, frame_time, layout='vertical')
-        self.combat = Combat(attack_power=15, attack_range=90, cooldown=1.0, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
+        self.combat = Combat(attack_power=15, attack_range=90, cooldown=0.1, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         # give it a patrol so it moves a bit
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=150, sight_range=450)
         self.state = self.animator.state
