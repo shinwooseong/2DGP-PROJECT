@@ -11,6 +11,7 @@ from tiled_map import TiledMap
 from UI import UI
 import inventory
 from Monster import Green_MS, Red_MS, Trash_Monster
+from loot import Loot
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
 player: Main_character = None
@@ -18,6 +19,7 @@ tiled_map: TiledMap = None
 ui = None
 collision_boxes = []  # 충돌 영역
 monsters = []  # 몬스터 리스트
+loots = []  # 떨어진 전리품 리스트
 
 def is_position_valid(x, y, min_distance=100):
     """위치가 충돌 박스와 겹치지 않고, 다른 몬스터와도 충분히 떨어져 있는지 확인"""
@@ -77,6 +79,9 @@ def spawn_random_monsters(count=5):
 
 def init():
     global player, tiled_map, collision_boxes, ui
+
+    # 0. 인벤토리 초기화 (이미지 로드)
+    #inventory.init()
 
     # 1. 타일드 맵 로드 (던전 맵 사용)
     tiled_map = TiledMap('map/dungeon1.json')
@@ -159,6 +164,8 @@ def check_collision(x, y, player):
     return False
 
 def update(dt):
+    global loots
+
     # 이전 위치 저장
     prev_x = player.x
     prev_y = player.y
@@ -171,11 +178,16 @@ def update(dt):
         # 살아있거나 death 애니메이션 중이면 업데이트
         monster.update(dt, frozen=False, player=player)
 
-        # death 애니메이션이 완전히 끝난 몬스터만 제거
+        # death 애니메이션이 완전히 끝난 몬스터만 제거하고 전리품 생성
         if not monster.alive and monster.animator.is_animation_finished():
+            # 전리품 생성
+            loot = Loot(monster.x, monster.y, 'coin', random.randint(1, 5))
+            loots.append(loot)
+            game_world.add_object(loot, 1)  # 플레이어와 같은 레이어
+
             game_world.remove_object(monster)
             monsters.remove(monster)
-            print(f"{monster.name} 제거 완료")
+            print(f"{monster.name} 제거 완료 - 전리품 생성!")
 
     # 플레이어 공격 충돌 처리
     player_attack_bb = player.get_bb()
@@ -201,6 +213,31 @@ def update(dt):
 
         # 한 번만 데미지 주기
         player.attack_hit_pending = False
+
+    # 전리품 업데이트 및 수집 처리
+    collected_loots = []
+    for loot in loots:
+        # 전리품 업데이트
+        should_remove = loot.update(dt)
+
+        # 플레이어가 수집 범위에 있는지 확인
+        if loot.check_collection(player.x, player.y):
+            item_info = loot.get_item_info()
+            # 배낭에 추가
+            inventory.add_item(item_info['type'], item_info['quantity'])
+            print(f"[COLLECT] 수집: {item_info['type']} x{item_info['quantity']}")
+
+        # 수집 완료되거나 제거 대상이면 표시
+        if should_remove or loot.collected:
+            collected_loots.append(loot)
+
+    # 완료된 전리품 제거
+    for loot in collected_loots:
+        try:
+            game_world.remove_object(loot)
+        except Exception:
+            pass
+        loots.remove(loot)
 
     # UI 업데이트
     if ui is not None:
