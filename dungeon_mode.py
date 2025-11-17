@@ -20,6 +20,10 @@ ui = None
 collision_boxes = []  # 충돌 영역
 monsters = []  # 몬스터 리스트
 loots = []  # 떨어진 전리품 리스트
+current_dungeon = 1  # 현재 던전 레벨
+all_monsters_cleared = False  # 모든 몬스터 처치 여부
+message_font = None  # 메시지 출력용 폰트
+exit_zone = None  # 출구 영역 (문 위치에 따라 설정할 것임)
 
 def is_position_valid(x, y, min_distance=100):
     """위치가 충돌 박스와 겹치지 않고, 다른 몬스터와도 충분히 떨어져 있는지 확인"""
@@ -78,21 +82,37 @@ def spawn_random_monsters(count=5):
     print(f"총 {len(monsters)}마리의 몬스터 생성 완료!")
 
 def init():
-    global player, tiled_map, collision_boxes, ui
+    global player, tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone
 
     # 0. 인벤토리 초기화 (이미지 로드)
     #inventory.init()
 
+    # 던전 맵 1이 던전 시작맵임.
+    current_dungeon = 1
+    all_monsters_cleared = False
+
+    # 메시지 폰트 로드
+    message_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 32)
+
+
     # 1. 타일드 맵 로드 (던전 맵 사용)
-    tiled_map = TiledMap('map/dungeon1.json')
+    if current_dungeon == 1:
+        tiled_map = TiledMap('map/dungeon1.json')
+    else:
+        # 맵 추가 시 elif로 설정할 것임
+        tiled_map = TiledMap('map/dungeon2.json')
 
     # 2. 충돌 영역 설정
     collision_boxes = tiled_map.get_collision_boxes()
 
-    # 3. 플레이어 생성 및 초기 위치 설정
+    # 3. 플레이어 생성 및 초기 위치 설정(맵 다 설정하면 위치 재설정 할 것임)
     player = Main_character()
-    player.x = 640  # 던전 시작 X 좌표 (중앙)
-    player.y = 200  # 던전 시작 Y 좌표
+    if current_dungeon == 1:
+        player.x = 640  # 던전1 시작 X 좌표 (중앙)
+        player.y = 200  # 던전1 시작 Y 좌표
+    else:
+        player.x = 640  # 던전2 시작 X 좌표
+        player.y = 200  # 던전2 시작 Y 좌표
 
     # 4. UI 생성 및 등록
     ui = UI()
@@ -103,11 +123,21 @@ def init():
     game_world.add_object(tiled_map, 0)  # 배경 레이어
     game_world.add_object(player, 1)     # 플레이어 레이어
 
-    # 6. 몬스터들을 랜덤하게 배치
-    spawn_random_monsters(count=8)  # 8마리의 몬스터 생성
+    # 6. 몬스터들을 랜덤하게 배치 (던전 지날수록 몬스터 수 증가하기)
+    if current_dungeon == 1:
+        spawn_random_monsters(count=8)  # 8마리의 몬스터 생성
+    else:
+        spawn_random_monsters(count=10)  # 던전2는 더 많이
+
+    # 7. 출구 영역 설정 (던전1 상단 문 위치)
+    # 던전1 맵의 상단 중앙 문 위치
+    if current_dungeon == 1:
+        exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
+    else:
+        exit_zone = None  # 던전2는 아직 출구 없다.
 
     # 디버그 정보 출력
-    print(f"======> 던전 모드 시작 ======>")
+    print(f"======> 던전 {current_dungeon} 모드 시작 ======>")
     print(f"로드된 충돌 상자 개수: {len(collision_boxes)}")
     print(f"맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px} 픽셀")
     print(f"스케일: {tiled_map.scale}")
@@ -163,8 +193,48 @@ def check_collision(x, y, player):
             return True
     return False
 
+def change_to_dungeon2():
+    global player, tiled_map, collision_boxes, monsters, loots, current_dungeon, all_monsters_cleared, exit_zone
+
+    print("======> 던전2로 이동 ======>")
+
+    # 현재 객체들 제거
+    game_world.clear()
+
+    # 상태 초기화
+    current_dungeon = 2
+    all_monsters_cleared = False
+    monsters = []
+    loots = []
+
+    # 던전2 맵 로드
+    tiled_map = TiledMap('map/dungeon2.json')
+    collision_boxes = tiled_map.get_collision_boxes()
+
+    # 플레이어 위치 설정 (던전2 시작 위치)
+    player.x = 640
+    player.y = 200
+
+    # UI 다시 생성
+    global ui
+    ui = UI()
+    ui.set_player(player)
+    game_world.add_object(ui, 2)
+
+    # 게임 월드에 다시 추가
+    game_world.add_object(tiled_map, 0)
+    game_world.add_object(player, 1)
+
+    # 던전2 몬스터 생성
+    spawn_random_monsters(count=10)
+
+    # 던전2는 일단 출구 없음
+    exit_zone = None
+
+    print(f"던전2 로드 완료: 몬스터 {len(monsters)}마리")
+
 def update(dt):
-    global loots
+    global loots, all_monsters_cleared
 
     # 이전 위치 저장
     prev_x = player.x
@@ -189,6 +259,18 @@ def update(dt):
             monsters.remove(monster)
             print(f"{monster.name} 제거 완료 - 전리품 생성!")
 
+    # 모든 몬스터 처치 확인 (던전1에서만)
+    if current_dungeon == 1 and not all_monsters_cleared and len(monsters) == 0:
+        all_monsters_cleared = True
+        print("======> 모든 몬스터 처치! 출구로 이동하세요! ======>")
+
+    # 출구 영역 체크 (던전1에서 모든 몬스터 처치 후)
+    if current_dungeon == 1 and all_monsters_cleared and exit_zone is not None:
+        left, bottom, right, top = exit_zone
+        if left <= player.x <= right and bottom <= player.y <= top:
+            change_to_dungeon2()
+            return  # update 중단
+
     # 플레이어 공격 충돌 처리
     player_attack_bb = player.get_bb()
     if player_attack_bb is not None and hasattr(player, 'attack_hit_pending') and player.attack_hit_pending:
@@ -198,7 +280,6 @@ def update(dt):
                 continue
 
             # 몬스터의 충돌 범위 계산
-            # 몬스터 크기는 스프라이트 크기에 따라 가정해서 일단 구함 -> 수정할 것
             monster_size = monster.scale * 25  # 반지름
             monster_left = monster.x - monster_size
             monster_right = monster.x + monster_size
@@ -244,7 +325,6 @@ def update(dt):
         ui.update(dt)
 
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
-    # 즉, 벽에 닿으면 벽 앞에서만 움직이는 효과
     if check_collision(player.x, player.y, player):
         player.x = prev_x
         player.y = prev_y
@@ -265,6 +345,21 @@ def draw():
             if attack_bb is not None:
                 left, bottom, right, top = attack_bb
                 draw_rectangle(left, bottom, right, top)
+
+    # 모든 몬스터 처치 시 메시지 표시 (던전1에서만)
+    if current_dungeon == 1 and all_monsters_cleared and message_font is not None:
+        # 화면 중앙에 메시지 출력
+        screen_center_x = 1280 // 2
+        screen_center_y = 736 // 2
+
+        # 메시지 텍스트
+        message = "다음 맵으로 넘어갈 수 있습니다"
+        message_font.draw(screen_center_x - 180, screen_center_y + 50, message, (255, 255, 0))
+
+        # 힌트 텍스트
+        # 일단 상단문만, 왼쪽문도 이동하게 할 가능성 있음.
+        hint = "(상단 문으로 이동하세요)"
+        message_font.draw(screen_center_x - 150, screen_center_y + 10, hint, (200, 200, 200))
 
     update_canvas()
 
