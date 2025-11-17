@@ -125,7 +125,7 @@ def init():
 
     # 6. 몬스터들을 랜덤하게 배치 (던전 지날수록 몬스터 수 증가하기)
     if current_dungeon == 1:
-        spawn_random_monsters(count=8)  # 8마리의 몬스터 생성
+        spawn_random_monsters(count=1)  # 8마리의 몬스터 생성
     else:
         spawn_random_monsters(count=10)  # 던전2는 더 많이
 
@@ -209,7 +209,18 @@ def change_to_dungeon2():
 
     # 던전2 맵 로드
     tiled_map = TiledMap('map/dungeon2.json')
+
+    # 충돌 박스 업데이트 (중요!)
     collision_boxes = tiled_map.get_collision_boxes()
+
+    # 디버그 출력 추가
+    print(f"던전2 충돌 박스 로드 완료: {len(collision_boxes)}개")
+    if collision_boxes:
+        print(f"첫 번째 충돌 박스: {collision_boxes[0]}")
+        for i, box in enumerate(collision_boxes[:3]):
+            print(f"  박스 {i}: {box}")
+    else:
+        print(" 경고: 던전2에 충돌 박스가 없습니다!")
 
     # 플레이어 위치 설정 (던전2 시작 위치)
     player.x = 640
@@ -333,7 +344,7 @@ def draw():
     clear_canvas()
     game_world.render()
 
-    # 충돌 박스들을 빨간색 테두리로 화면에 표시 (던전은 빨간색으로)
+    # 충돌 박스들을 테두리로 화면에 표시 (던전)
     for box in collision_boxes:
         left, bottom, right, top = box
         draw_rectangle(left, bottom, right, top)
