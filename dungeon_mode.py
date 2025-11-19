@@ -127,14 +127,15 @@ def init():
     if current_dungeon == 1:
         spawn_random_monsters(count=1)  # 8마리의 몬스터 생성
     else:
-        spawn_random_monsters(count=10)  # 던전2는 더 많이
+        spawn_random_monsters(count=2)  # 던전2는 더 많이
 
     # 7. 출구 영역 설정 (던전1 상단 문 위치)
     # 던전1 맵의 상단 중앙 문 위치
     if current_dungeon == 1:
         exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
     else:
-        exit_zone = None  # 던전2는 아직 출구 없다.
+        # 던전2도 상단 문 위치에 출구 설정
+        exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
 
     # 디버그 정보 출력
     print(f"======> 던전 {current_dungeon} 모드 시작 ======>")
@@ -239,10 +240,60 @@ def change_to_dungeon2():
     # 던전2 몬스터 생성
     spawn_random_monsters(count=10)
 
-    # 던전2는 일단 출구 없음
-    exit_zone = None
+    # 던전2도 상단 문 위치에 출구 설정
+    exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
 
     print(f"던전2 로드 완료: 몬스터 {len(monsters)}마리")
+
+def change_to_boss_room():
+    global player, tiled_map, collision_boxes, monsters, loots, current_dungeon, all_monsters_cleared, exit_zone
+
+    print("======> 보스방으로 이동 ======>")
+
+    # 현재 객체들 제거
+    game_world.clear()
+
+    # 상태 초기화
+    current_dungeon = 3  # 보스방을 던전 3으로 표시
+    all_monsters_cleared = False
+    monsters = []
+    loots = []
+
+    # 보스방 맵 로드
+    tiled_map = TiledMap('map/boos_room.json')
+
+    # 충돌 박스 업데이트
+    collision_boxes = tiled_map.get_collision_boxes()
+
+    # 디버그 출력
+    print(f"보스방 충돌 박스 로드 완료: {len(collision_boxes)}개")
+    if collision_boxes:
+        print(f"첫 번째 충돌 박스: {collision_boxes[0]}")
+        for i, box in enumerate(collision_boxes[:3]):
+            print(f"  박스 {i}: {box}")
+
+    # 플레이어 위치 설정 (보스방 시작 위치)
+    player.x = 640
+    player.y = 200
+
+    # UI 다시 생성
+    global ui
+    ui = UI()
+    ui.set_player(player)
+    game_world.add_object(ui, 2)
+
+    # 게임 월드에 다시 추가
+    game_world.add_object(tiled_map, 0)
+    game_world.add_object(player, 1)
+
+    # 보스 몬스터 생성 (보스 1마리만)
+    # 나중에 보스 클래스를 만들면 여기서 생성하기
+    spawn_random_monsters(count=1)  # 임시로 일반 몬스터 1마리
+
+    # 보스방에서는 출구 없음 (아직)
+    exit_zone = None
+
+    print(f"보스방 로드 완료")
 
 def update(dt):
     global loots, all_monsters_cleared
@@ -275,11 +326,23 @@ def update(dt):
         all_monsters_cleared = True
         print("======> 모든 몬스터 처치! 출구로 이동하세요! ======>")
 
+    # 모든 몬스터 처치 확인 (던전2에서만)
+    if current_dungeon == 2 and not all_monsters_cleared and len(monsters) == 0:
+        all_monsters_cleared = True
+        print("======> 던전2의 모든 몬스터 처치! 보스방으로 이동하세요! ======>")
+
     # 출구 영역 체크 (던전1에서 모든 몬스터 처치 후)
     if current_dungeon == 1 and all_monsters_cleared and exit_zone is not None:
         left, bottom, right, top = exit_zone
         if left <= player.x <= right and bottom <= player.y <= top:
             change_to_dungeon2()
+            return  # update 중단
+
+    # 출구 영역 체크 (던전2에서 모든 몬스터 처치 후 보스방으로)
+    if current_dungeon == 2 and all_monsters_cleared and exit_zone is not None:
+        left, bottom, right, top = exit_zone
+        if left <= player.x <= right and bottom <= player.y <= top:
+            change_to_boss_room()
             return  # update 중단
 
     # 플레이어 공격 충돌 처리
