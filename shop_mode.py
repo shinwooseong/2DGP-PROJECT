@@ -16,6 +16,9 @@ tiled_map: TiledMap = None
 ui = None
 collision_boxes = []  # 충돌 영역 (레이어 1: Collisions)
 
+# 상점 진입 위치 저장 변수 (마을에서 왔는지 다른 곳에서 왔는지)
+came_from_village = True
+
 def init():
     global player, tiled_map, collision_boxes, ui
 
@@ -25,12 +28,12 @@ def init():
     # 2. 충돌 영역 설정 (레이어 1)
     collision_boxes = tiled_map.get_collision_boxes()
 
-    # 3. 플레이어 생성 및 초기 위치 설정
+    # 3. 플레이어 생성 및 초기 위치 설정 (상점 입구 위치: 하단 중앙보다 약간 오른쪽)
     player = Main_character()
-    player.x = 500  # 시작 X 좌표
-    player.y = 150  # 시작 Y 좌표
+    player.x = 630
+    player.y = 10
 
-    # 3.5 UI 생성 및 등록 (try...except 제거)
+    # 3.5 UI 생성 및 등록
     ui = UI()
     ui.set_player(player)
     game_world.add_object(ui, 2)
@@ -112,9 +115,13 @@ def update(dt):
         player.x = prev_x
         player.y = prev_y
 
-    # 테스트용 종료 코드
-    if player.y < 10 or player.x > 1200:
-        game_framework.quit()
+    # 플레이어가 y축 하단으로 나가면 village_mode로 전환
+    if player.y < 10:
+        print("======> 상점 나가기 - 마을로 이동 ======>")
+        import village_mode
+        village_mode.came_from_shop = True  # 상점에서 나왔다는 플래그 설정
+        game_framework.change_mode(village_mode)
+        return
 
 def draw():
     clear_canvas()

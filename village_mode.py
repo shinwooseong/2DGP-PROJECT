@@ -31,8 +31,11 @@ show_dungeon_warning = False  # 던전 경고 다이얼로그 표시 여부
 player_at_dungeon_exit = False  # 플레이어가 던전 출구 영역에 있는지
 player_at_shop_exit = False  # 플레이어가 상점 출구 영역에 있는지
 
+# 상점에서 나왔는지 확인하는 플래그
+came_from_shop = False
+
 def init():
-    global player, tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font
+    global player, tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop
 
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
@@ -46,8 +49,27 @@ def init():
 
     # 3. 플레이어 생성 및 초기 위치 설정
     player = Main_character()
-    player.x = 640  # 시작 X 좌표
-    player.y = 400  # 시작 Y 좌표
+
+    # 상점에서 나왔다면 상점 입구 앞에 배치
+    if came_from_shop:
+        # 상점 입구 앞 위치 (상점 출구 영역 바로 아래)
+        tile_size = 10
+        scale = tiled_map.scale
+        offset_x = tiled_map.offset_x
+        offset_y = tiled_map.offset_y
+        map_height_px = tiled_map.map_height_px
+
+        # 상점 입구 중앙
+        shop_entrance_x = 77.5 * tile_size * scale + offset_x
+        shop_entrance_y = (map_height_px - 22 * tile_size) * scale + offset_y
+
+        player.x = shop_entrance_x
+        player.y = shop_entrance_y
+        came_from_shop = False  # 플래그 리셋
+    else:
+        # 기본 시작 위치
+        player.x = 640  # 시작 X 좌표
+        player.y = 400  # 시작 Y 좌표
 
     # 4. UI 생성 및 등록
     ui = UI()
