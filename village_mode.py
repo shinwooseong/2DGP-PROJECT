@@ -22,8 +22,19 @@ collision_boxes = []  # 충돌 영역
 # 던전 출구 영역 (타일 좌표 x 37~41, y 5) 우상단 길 있는 곳
 exit_zone = None
 
+# 다이얼로그 관련 변수
+dialogue_box_image = None
+dialogue_font = None
+show_dungeon_warning = False  # 던전 경고 다이얼로그 표시 여부
+player_at_exit = False  # 플레이어가 출구 영역에 있는지
+
 def init():
-    global player, tiled_map, collision_boxes, ui, exit_zone
+    global player, tiled_map, collision_boxes, ui, exit_zone, dialogue_box_image, dialogue_font
+
+    # 다이얼로그 이미지와 폰트 로드
+    dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
+    dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
+
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/village.json', use_camera=False)
@@ -91,25 +102,55 @@ def finish():
     ui = None
 
 def handle_events():
+    global show_dungeon_warning, player_at_exit
+
     events = get_events()
     for event in events:
         if event.type == SDL_QUIT:
             game_framework.quit()
         elif event.type == SDL_KEYDOWN:
             if event.key == SDLK_ESCAPE:
-                game_framework.quit()
+                # 다이얼로그 표시 중이면 다이얼로그 닫기
+                if show_dungeon_warning:
+                    show_dungeon_warning = False
+                    player_at_exit = False  # 출구 영역 상태 리셋
+
+                    # 플레이어 키 입력 상태 초기화 (계속 직진 방지)
+                    player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
+
+                    # 플레이어를 출구 영역 밖으로 이동 (아래쪽으로 50픽셀)
+                    player.y -= 50
+
+                    print("던전 진입 취소 - 플레이어를 입구 밖으로 이동")
+                else:
+                    game_framework.quit()
             elif event.key == SDLK_u:
-                game_framework.push_mode(inventory)
+                # 다이얼로그 표시 중이 아닐 때만 인벤토리 열기
+                if not show_dungeon_warning:
+                    game_framework.push_mode(inventory)
             elif event.key == SDLK_RETURN:
-                # ENTER 키를 누르면 dungeon_mode로 전환
-                import dungeon_mode
-                game_framework.change_mode(dungeon_mode)
+                # 다이얼로그 표시 중이면 던전 진입
+                if show_dungeon_warning:
+                    print("던전 진입 확인")
+                    show_dungeon_warning = False
+
+                    # 플레이어 키 입력 상태 초기화 (던전 진입 전)
+                    player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
+
+                    import dungeon_mode
+                    game_framework.change_mode(dungeon_mode)
             else:
-                player.handle_event(event)
+                # 다이얼로그 표시 중이 아닐 때만 플레이어 이동
+                if not show_dungeon_warning:
+                    player.handle_event(event)
         elif event.type == SDL_KEYUP:
-            player.handle_event(event)
+            # 다이얼로그 표시 중이 아닐 때만 플레이어 이동
+            if not show_dungeon_warning:
+                player.handle_event(event)
         else:
-            player.handle_event(event)
+            # 다이얼로그 표시 중이 아닐 때만 플레이어 이동
+            if not show_dungeon_warning:
+                player.handle_event(event)
 
 def check_collision(x, y, player):
     # 변신 상태에 따라 다른 충돌 범위 사용
@@ -136,6 +177,12 @@ def check_exit_zone(player_x, player_y):
     return left <= player_x <= right and bottom <= player_y <= top
 
 def update(dt):
+    global show_dungeon_warning, player_at_exit
+
+    # 다이얼로그 표시 중이면 플레이어 업데이트 중단
+    if show_dungeon_warning:
+        return
+
     # 이전 위치 저장
     prev_x = player.x
     prev_y = player.y
@@ -175,12 +222,17 @@ def update(dt):
     elif player.y > map_height - collision_h:
         player.y = map_height - collision_h
 
-    # 출구 영역 체크: 던전으로 이동
-    if check_exit_zone(player.x, player.y):
-        print("======> 출구 진입: 던전으로 이동 ======>")
-        import dungeon_mode
-        game_framework.change_mode(dungeon_mode)
-        return
+    # 출구 영역 체크
+    at_exit = check_exit_zone(player.x, player.y)
+
+    # 플레이어가 출구 영역에 처음 진입했을 때만 다이얼로그 표시
+    if at_exit and not player_at_exit:
+        print("======> 던전 입구 도착! 경고 다이얼로그 표시 ======>")
+        show_dungeon_warning = True
+        player_at_exit = True
+    elif not at_exit:
+        # 플레이어가 출구 영역을 벗어나면 상태 리셋
+        player_at_exit = False
 
 def draw():
     clear_canvas()
@@ -196,6 +248,24 @@ def draw():
         left, bottom, right, top = exit_zone
         for i in range(3):
             draw_rectangle(left - i, bottom - i, right + i, top + i)
+
+    # 던전 경고 다이얼로그 표시
+    if show_dungeon_warning and dialogue_box_image and dialogue_font:
+        # 다이얼로그 박스 그리기 (화면 중앙)
+        dialogue_box_image.draw(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
+        # 텍스트 그리기 (중앙 정렬)
+        # 첫 번째 줄: 경고 메시지
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT // 2 + 30,
+                          "던전입니다.", (255, 0, 0))
+
+        # 두 번째 줄: 확인 질문
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 10,
+                          "정말 들어가겠습니까?", (0, 0, 0))
+
+        # 세 번째 줄: 선택 안내
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 140, SCREEN_HEIGHT // 2 - 50,
+                          "네(Enter)    아니요(ESC)", (15, 15, 15))
 
     update_canvas()
 
