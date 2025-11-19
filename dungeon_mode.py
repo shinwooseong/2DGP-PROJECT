@@ -14,6 +14,10 @@ from Monster import Green_MS, Red_MS, Trash_Monster
 from loot import Loot
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
+# 화면 크기
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 736
+
 player: Main_character = None
 tiled_map: TiledMap = None
 ui = None
@@ -24,6 +28,10 @@ current_dungeon = 1  # 현재 던전 레벨
 all_monsters_cleared = False  # 모든 몬스터 처치 여부
 message_font = None  # 메시지 출력용 폰트
 exit_zone = None  # 출구 영역 (문 위치에 따라 설정할 것임)
+
+# 카메라 변수
+camera_x = 0
+camera_y = 0
 
 def is_position_valid(x, y, min_distance=100):
     """위치가 충돌 박스와 겹치지 않고, 다른 몬스터와도 충분히 떨어져 있는지 확인"""
@@ -95,12 +103,12 @@ def init():
     message_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 32)
 
 
-    # 1. 타일드 맵 로드 (던전 맵 사용)
+    # 1. 타일드 맵 로드 (던전 맵 사용 - 카메라 미사용)
     if current_dungeon == 1:
-        tiled_map = TiledMap('map/dungeon1.json')
+        tiled_map = TiledMap('map/dungeon1.json', use_camera=False)
     else:
         # 맵 추가 시 elif로 설정할 것임
-        tiled_map = TiledMap('map/dungeon2.json')
+        tiled_map = TiledMap('map/dungeon2.json', use_camera=False)
 
     # 2. 충돌 영역 설정
     collision_boxes = tiled_map.get_collision_boxes()
@@ -208,8 +216,8 @@ def change_to_dungeon2():
     monsters = []
     loots = []
 
-    # 던전2 맵 로드
-    tiled_map = TiledMap('map/dungeon2.json')
+    # 던전2 맵 로드 (카메라 미사용 - 화면에 맞게 스케일링)
+    tiled_map = TiledMap('map/dungeon2.json', use_camera=False)
 
     # 충돌 박스 업데이트 (중요!)
     collision_boxes = tiled_map.get_collision_boxes()
@@ -238,7 +246,7 @@ def change_to_dungeon2():
     game_world.add_object(player, 1)
 
     # 던전2 몬스터 생성
-    spawn_random_monsters(count=10)
+    spawn_random_monsters(count=1)
 
     # 던전2도 상단 문 위치에 출구 설정
     exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
@@ -259,8 +267,8 @@ def change_to_boss_room():
     monsters = []
     loots = []
 
-    # 보스방 맵 로드
-    tiled_map = TiledMap('map/boos_room.json')
+    # 보스방 맵 로드 (카메라 사용)
+    tiled_map = TiledMap('map/bose_room.json', use_camera=True)
 
     # 충돌 박스 업데이트
     collision_boxes = tiled_map.get_collision_boxes()
@@ -296,7 +304,7 @@ def change_to_boss_room():
     print(f"보스방 로드 완료")
 
 def update(dt):
-    global loots, all_monsters_cleared
+    global loots, all_monsters_cleared, camera_x, camera_y
 
     # 이전 위치 저장
     prev_x = player.x
@@ -403,35 +411,122 @@ def update(dt):
         player.x = prev_x
         player.y = prev_y
 
+    # 카메라 업데이트: 플레이어를 따라다니도록 설정
+    # 맵 경계를 넘어가지 않도록 제한
+    map_width = tiled_map.map_width_px
+    map_height = tiled_map.map_height_px
+
+    # 카메라를 플레이어 중심으로
+    camera_x = player.x
+    camera_y = player.y
+
+    # 카메라가 맵 경계를 넘어가지 않도록 제한
+    half_screen_w = SCREEN_WIDTH // 2
+    half_screen_h = SCREEN_HEIGHT // 2
+
+    # 카메라 X 제한
+    if camera_x - half_screen_w < 0:
+        camera_x = half_screen_w
+    elif camera_x + half_screen_w > map_width:
+        camera_x = map_width - half_screen_w
+
+    # 카메라 Y 제한
+    if camera_y - half_screen_h < 0:
+        camera_y = half_screen_h
+    elif camera_y + half_screen_h > map_height:
+        camera_y = map_height - half_screen_h
+
 def draw():
     clear_canvas()
-    game_world.render()
 
-    # 충돌 박스들을 테두리로 화면에 표시 (던전)
-    for box in collision_boxes:
-        left, bottom, right, top = box
-        draw_rectangle(left, bottom, right, top)
+    # 보스방(던전3)에서만 카메라 사용
+    if current_dungeon == 3:
+        # 카메라 오프셋 계산
+        cam_offset_x = SCREEN_WIDTH // 2 - camera_x
+        cam_offset_y = SCREEN_HEIGHT // 2 - camera_y
 
-    # 몬스터들의 공격 범위 표시
-    for monster in monsters:
-        if monster.alive and monster.show_attack_range:
-            attack_bb = monster.get_attack_bb()
-            if attack_bb is not None:
-                left, bottom, right, top = attack_bb
-                draw_rectangle(left, bottom, right, top)
+        # 배경 맵을 카메라 기준으로 그리기
+        if tiled_map:
+            tiled_map.draw_with_camera(camera_x, camera_y)
 
-    # 모든 몬스터 처치 시 메시지 표시 (던전1에서만)
+        # 게임 월드의 객체들을 카메라 기준으로 그리기
+        for obj in game_world.all_objects():
+            if hasattr(obj, 'draw'):
+                # 원래 위치 저장
+                original_x = None
+                original_y = None
+
+                # 맵과 UI는 카메라 영향 받지 않음
+                if obj == tiled_map or obj == ui:
+                    obj.draw()
+                else:
+                    # 카메라 오프셋 적용
+                    if hasattr(obj, 'x') and hasattr(obj, 'y'):
+                        original_x = obj.x
+                        original_y = obj.y
+                        obj.x = original_x + cam_offset_x
+                        obj.y = original_y + cam_offset_y
+
+                    obj.draw()
+
+                    # 원래 위치 복원
+                    if original_x is not None:
+                        obj.x = original_x
+                        obj.y = original_y
+
+        # 충돌 박스들을 카메라 기준으로 화면에 표시 (디버그용)
+        for box in collision_boxes:
+            left, bottom, right, top = box
+            # 월드 좌표를 화면 좌표로 변환
+            screen_left = left + cam_offset_x
+            screen_bottom = bottom + cam_offset_y
+            screen_right = right + cam_offset_x
+            screen_top = top + cam_offset_y
+            draw_rectangle(screen_left, screen_bottom, screen_right, screen_top)
+
+        # 몬스터들의 공격 범위 표시 (카메라 기준)
+        for monster in monsters:
+            if monster.alive and monster.show_attack_range:
+                attack_bb = monster.get_attack_bb()
+                if attack_bb is not None:
+                    left, bottom, right, top = attack_bb
+                    screen_left = left + cam_offset_x
+                    screen_bottom = bottom + cam_offset_y
+                    screen_right = right + cam_offset_x
+                    screen_top = top + cam_offset_y
+                    draw_rectangle(screen_left, screen_bottom, screen_right, screen_top)
+    else:
+        # 던전1, 던전2는 카메라 없이 기본 렌더링
+        game_world.render()
+
+        # 충돌 박스들을 화면에 표시
+        for box in collision_boxes:
+            left, bottom, right, top = box
+            draw_rectangle(left, bottom, right, top)
+
+        # 몬스터들의 공격 범위 표시
+        for monster in monsters:
+            if monster.alive and monster.show_attack_range:
+                attack_bb = monster.get_attack_bb()
+                if attack_bb is not None:
+                    left, bottom, right, top = attack_bb
+                    draw_rectangle(left, bottom, right, top)
+
+    # 모든 몬스터 처치 시 메시지 표시 (화면 고정 위치)
     if current_dungeon == 1 and all_monsters_cleared and message_font is not None:
-        # 화면 중앙에 메시지 출력
-        screen_center_x = 1280 // 2
-        screen_center_y = 736 // 2
-
-        # 메시지 텍스트
+        screen_center_x = SCREEN_WIDTH // 2
+        screen_center_y = SCREEN_HEIGHT // 2
         message = "다음 맵으로 넘어갈 수 있습니다"
         message_font.draw(screen_center_x - 180, screen_center_y + 50, message, (255, 255, 0))
+        hint = "(상단 문으로 이동하세요)"
+        message_font.draw(screen_center_x - 150, screen_center_y + 10, hint, (200, 200, 200))
 
-        # 힌트 텍스트
-        # 일단 상단문만, 왼쪽문도 이동하게 할 가능성 있음.
+    # 던전2 메시지
+    if current_dungeon == 2 and all_monsters_cleared and message_font is not None:
+        screen_center_x = SCREEN_WIDTH // 2
+        screen_center_y = SCREEN_HEIGHT // 2
+        message = "보스방으로 넘어갈 수 있습니다"
+        message_font.draw(screen_center_x - 180, screen_center_y + 50, message, (255, 255, 0))
         hint = "(상단 문으로 이동하세요)"
         message_font.draw(screen_center_x - 150, screen_center_y + 10, hint, (200, 200, 200))
 
