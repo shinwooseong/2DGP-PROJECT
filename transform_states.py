@@ -104,12 +104,9 @@ class TransformWalk:
             self.character.state_machine.handle_state_event(('STOP', None))
             return
 
-        # 실제 충돌 범위로 화면 경계 제한 (스프라이트 크기 대신)
-        collision_half_w = TRANSFORM_COLLISION_W // 2
-        collision_half_h = TRANSFORM_COLLISION_H // 2
-
-        self.character.x = max(collision_half_w, min(SCREEN_W - collision_half_w, self.character.x + dx))
-        self.character.y = max(collision_half_h, min(SCREEN_H - collision_half_h, self.character.y + dy))
+        # 이동 적용 (경계 제한은 각 게임 모드에서 처리)
+        self.character.x += dx
+        self.character.y += dy
 
     def draw(self):
         loader = self.character.transform_loader
@@ -173,19 +170,16 @@ class TransformRoll:
         if remaining > 0.0:
             move = min(ROLL_SPEED * dt, remaining)
 
-            # 실제 충돌 범위로 화면 경계 제한
-            collision_half_w = TRANSFORM_COLLISION_W // 2
-            collision_half_h = TRANSFORM_COLLISION_H // 2
-
+            # 이동 적용 (경계 제한은 각 게임 모드에서 처리)
             if self.character.key_map['UP']:
-                self.character.y = min(SCREEN_H - collision_half_h, self.character.y + move)
+                self.character.y += move
             elif self.character.key_map['DOWN']:
-                self.character.y = max(collision_half_h, self.character.y - move)
+                self.character.y -= move
 
             if self.character.dir == 'LEFT':
-                self.character.x = max(collision_half_w, self.character.x - move)
+                self.character.x -= move
             elif self.character.dir == 'RIGHT':
-                self.character.x = min(SCREEN_W - collision_half_w, self.character.x + move)
+                self.character.x += move
 
             self.character.roll_moved = getattr(self.character, 'roll_moved', 0.0) + move
 

@@ -92,12 +92,9 @@ class Walk:
             self.character.state_machine.handle_state_event(('STOP', None))
             return
 
-        # 실제 충돌 범위로 화면 경계 제한 (스프라이트 크기 대신)
-        collision_half_w = CHARACTER_COLLISION_W // 2
-        collision_half_h = CHARACTER_COLLISION_H // 2
-
-        self.character.x = max(collision_half_w, min(SCREEN_W - collision_half_w, self.character.x + dx))
-        self.character.y = max(collision_half_h, min(SCREEN_H - collision_half_h, self.character.y + dy))
+        # 이동 적용 (경계 제한은 각 게임 모드에서 처리)
+        self.character.x += dx
+        self.character.y += dy
 
     def draw(self):
         loader = self.character.loader
@@ -227,12 +224,9 @@ class Attack:
         if self.character.key_map['LEFT']:
             dx -= move_speed * dt
         if self.character.key_map['RIGHT']:
-            dx += move_speed * dt
-
-        if dx != 0.0 or dy != 0.0:
-            # 실제 충돌 범위로 화면 경계 제한
-            collision_half_w = CHARACTER_COLLISION_W // 2
-            collision_half_h = CHARACTER_COLLISION_H // 2
+            # 이동 적용 (경계 제한은 각 게임 모드에서 처리)
+            self.character.x += dx
+            self.character.y += dy
 
             self.character.x = max(collision_half_w, min(SCREEN_W - collision_half_w, self.character.x + dx))
             self.character.y = max(collision_half_h, min(SCREEN_H - collision_half_h, self.character.y + dy))
