@@ -20,21 +20,23 @@ ui = None
 collision_boxes = []  # 충돌 영역
 
 # 던전 출구 영역 (타일 좌표 x 37~41, y 5) 우상단 길 있는 곳
-exit_zone = None
+exit_zone_dungeon = None
+# 상점 출구 영역 (타일 좌표 x 75~78, y 24~26)
+exit_zone_shop = None
 
 # 다이얼로그 관련 변수
 dialogue_box_image = None
 dialogue_font = None
 show_dungeon_warning = False  # 던전 경고 다이얼로그 표시 여부
-player_at_exit = False  # 플레이어가 출구 영역에 있는지
+player_at_dungeon_exit = False  # 플레이어가 던전 출구 영역에 있는지
+player_at_shop_exit = False  # 플레이어가 상점 출구 영역에 있는지
 
 def init():
-    global player, tiled_map, collision_boxes, ui, exit_zone, dialogue_box_image, dialogue_font
+    global player, tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font
 
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
-
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/village.json', use_camera=False)
@@ -56,26 +58,36 @@ def init():
     game_world.add_object(tiled_map, 0)  # 배경 레이어
     game_world.add_object(player, 1)     # 플레이어 레이어
 
-    # 6. 출구 영역 설정 (타일 좌표 x 37~41, y 3를 픽셀 좌표로 변환)
+    # 6. 출구 영역 설정
     # village 타일 크기: 10x10 픽셀
-    # 타일 좌표를 픽셀 좌표로 변환 후 스케일과 오프셋 적용
     tile_size = 10
-    tile_left = 37 * tile_size
-    tile_right = 41 * tile_size
-    tile_bottom = 3 * tile_size
-    tile_top = 6 * tile_size  # y 5 타일의 상단
-
-    # 스케일과 오프셋 적용
     scale = tiled_map.scale
     offset_x = tiled_map.offset_x
     offset_y = tiled_map.offset_y
-
-    # Tiled 좌표계를 Pico2D 좌표계로 변환
     map_height_px = tiled_map.map_height_px
+
+    # 던전 출구
+    tile_left = 37 * tile_size
+    tile_right = 41 * tile_size
+    tile_bottom = 3 * tile_size
+    tile_top = 6 * tile_size
     pico2d_bottom = map_height_px - tile_top
     pico2d_top = map_height_px - tile_bottom
+    exit_zone_dungeon = (
+        tile_left * scale + offset_x,
+        pico2d_bottom * scale + offset_y,
+        tile_right * scale + offset_x,
+        pico2d_top * scale + offset_y
+    )
 
-    exit_zone = (
+    # 상점 출구
+    tile_left = 76 * tile_size
+    tile_right = 79 * tile_size
+    tile_bottom = 19 * tile_size
+    tile_top = 21 * tile_size
+    pico2d_bottom = map_height_px - tile_top
+    pico2d_top = map_height_px - tile_bottom
+    exit_zone_shop = (
         tile_left * scale + offset_x,
         pico2d_bottom * scale + offset_y,
         tile_right * scale + offset_x,
@@ -87,7 +99,8 @@ def init():
     print(f"로드된 충돌 상자 개수: {len(collision_boxes)}")
     print(f"맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px} 픽셀")
     print(f"스케일: {tiled_map.scale}")
-    print(f"출구 영역 (던전): {exit_zone}")
+    print(f"출구 영역 (던전): {exit_zone_dungeon}")
+    print(f"출구 영역 (상점): {exit_zone_shop}")
 
     if collision_boxes:
         print(f"첫 번째 충돌 박스: {collision_boxes[0]}")
@@ -102,7 +115,7 @@ def finish():
     ui = None
 
 def handle_events():
-    global show_dungeon_warning, player_at_exit
+    global show_dungeon_warning, player_at_dungeon_exit
 
     events = get_events()
     for event in events:
@@ -113,7 +126,7 @@ def handle_events():
                 # 다이얼로그 표시 중이면 다이얼로그 닫기
                 if show_dungeon_warning:
                     show_dungeon_warning = False
-                    player_at_exit = False  # 출구 영역 상태 리셋
+                    player_at_dungeon_exit = False  # 출구 영역 상태 리셋
 
                     # 플레이어 키 입력 상태 초기화 (계속 직진 방지)
                     player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
@@ -169,7 +182,8 @@ def check_collision(x, y, player):
             return True
     return False
 
-def check_exit_zone(player_x, player_y):
+def check_exit_zone(player_x, player_y, exit_zone):
+    """플레이어가 출구 영역에 들어갔는지 확인"""
     if exit_zone is None:
         return False
 
@@ -177,7 +191,7 @@ def check_exit_zone(player_x, player_y):
     return left <= player_x <= right and bottom <= player_y <= top
 
 def update(dt):
-    global show_dungeon_warning, player_at_exit
+    global show_dungeon_warning, player_at_dungeon_exit, player_at_shop_exit
 
     # 다이얼로그 표시 중이면 플레이어 업데이트 중단
     if show_dungeon_warning:
@@ -222,17 +236,29 @@ def update(dt):
     elif player.y > map_height - collision_h:
         player.y = map_height - collision_h
 
-    # 출구 영역 체크
-    at_exit = check_exit_zone(player.x, player.y)
+    # 던전 출구 영역 체크
+    at_dungeon_exit = check_exit_zone(player.x, player.y, exit_zone_dungeon)
 
-    # 플레이어가 출구 영역에 처음 진입했을 때만 다이얼로그 표시
-    if at_exit and not player_at_exit:
+    # 플레이어가 던전 출구 영역에 처음 진입했을 때만 다이얼로그 표시
+    if at_dungeon_exit and not player_at_dungeon_exit:
         print("======> 던전 입구 도착! 경고 다이얼로그 표시 ======>")
         show_dungeon_warning = True
-        player_at_exit = True
-    elif not at_exit:
-        # 플레이어가 출구 영역을 벗어나면 상태 리셋
-        player_at_exit = False
+        player_at_dungeon_exit = True
+    elif not at_dungeon_exit:
+        # 플레이어가 던전 출구 영역을 벗어나면 상태 리셋
+        player_at_dungeon_exit = False
+
+    # 상점 출구 영역 체크 (경고 없이 바로 진입)
+    at_shop_exit = check_exit_zone(player.x, player.y, exit_zone_shop)
+
+    if at_shop_exit and not player_at_shop_exit:
+        print("======> 상점 입구 진입! ======>")
+        player_at_shop_exit = True
+        import shop_mode
+        game_framework.change_mode(shop_mode)
+        return
+    elif not at_shop_exit:
+        player_at_shop_exit = False
 
 def draw():
     clear_canvas()
@@ -243,10 +269,16 @@ def draw():
         left, bottom, right, top = box
         draw_rectangle(left, bottom, right, top)
 
-    # 출구 영역 표시 (디버그용)
-    if exit_zone:
-        left, bottom, right, top = exit_zone
+    # 던전 출구 영역 표시 (디버그용 - 노란색)
+    if exit_zone_dungeon:
+        left, bottom, right, top = exit_zone_dungeon
         for i in range(3):
+            draw_rectangle(left - i, bottom - i, right + i, top + i)
+
+    # 상점 출구 영역 표시 (디버그용 - 초록색처럼)
+    if exit_zone_shop:
+        left, bottom, right, top = exit_zone_shop
+        for i in range(5):  # 더 두꺼운 선으로 구분
             draw_rectangle(left - i, bottom - i, right + i, top + i)
 
     # 던전 경고 다이얼로그 표시
@@ -256,16 +288,16 @@ def draw():
 
         # 텍스트 그리기 (중앙 정렬)
         # 첫 번째 줄: 경고 메시지
-        dialogue_font.draw(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT // 2 + 30,
-                          "던전입니다.", (255, 0, 0))
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 30,
+                           "던전입니다.", (255, 0, 0))
 
         # 두 번째 줄: 확인 질문
         dialogue_font.draw(SCREEN_WIDTH // 2 - 120, SCREEN_HEIGHT // 2 - 10,
-                          "정말 들어가겠습니까?", (0, 0, 0))
+                           "정말 들어가겠습니까?", (0, 0, 0))
 
         # 세 번째 줄: 선택 안내
         dialogue_font.draw(SCREEN_WIDTH // 2 - 140, SCREEN_HEIGHT // 2 - 50,
-                          "네(Enter)    아니요(ESC)", (15, 15, 15))
+                           "네(Enter)    아니요(ESC)", (15, 15, 15))
 
     update_canvas()
 
