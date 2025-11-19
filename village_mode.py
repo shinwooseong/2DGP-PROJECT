@@ -19,8 +19,11 @@ tiled_map: TiledMap = None
 ui = None
 collision_boxes = []  # 충돌 영역
 
+# 던전 출구 영역 (타일 좌표 x 37~41, y 5) 우상단 길 있는 곳
+exit_zone = None
+
 def init():
-    global player, tiled_map, collision_boxes, ui
+    global player, tiled_map, collision_boxes, ui, exit_zone
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/village.json', use_camera=False)
@@ -42,11 +45,38 @@ def init():
     game_world.add_object(tiled_map, 0)  # 배경 레이어
     game_world.add_object(player, 1)     # 플레이어 레이어
 
+    # 6. 출구 영역 설정 (타일 좌표 x 37~41, y 3를 픽셀 좌표로 변환)
+    # village 타일 크기: 10x10 픽셀
+    # 타일 좌표를 픽셀 좌표로 변환 후 스케일과 오프셋 적용
+    tile_size = 10
+    tile_left = 37 * tile_size
+    tile_right = 41 * tile_size
+    tile_bottom = 3 * tile_size
+    tile_top = 6 * tile_size  # y 5 타일의 상단
+
+    # 스케일과 오프셋 적용
+    scale = tiled_map.scale
+    offset_x = tiled_map.offset_x
+    offset_y = tiled_map.offset_y
+
+    # Tiled 좌표계를 Pico2D 좌표계로 변환
+    map_height_px = tiled_map.map_height_px
+    pico2d_bottom = map_height_px - tile_top
+    pico2d_top = map_height_px - tile_bottom
+
+    exit_zone = (
+        tile_left * scale + offset_x,
+        pico2d_bottom * scale + offset_y,
+        tile_right * scale + offset_x,
+        pico2d_top * scale + offset_y
+    )
+
     # 디버그 정보 출력
     print(f"======> Village 모드 시작 ======>")
     print(f"로드된 충돌 상자 개수: {len(collision_boxes)}")
     print(f"맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px} 픽셀")
     print(f"스케일: {tiled_map.scale}")
+    print(f"출구 영역 (던전): {exit_zone}")
 
     if collision_boxes:
         print(f"첫 번째 충돌 박스: {collision_boxes[0]}")
@@ -98,6 +128,13 @@ def check_collision(x, y, player):
             return True
     return False
 
+def check_exit_zone(player_x, player_y):
+    if exit_zone is None:
+        return False
+
+    left, bottom, right, top = exit_zone
+    return left <= player_x <= right and bottom <= player_y <= top
+
 def update(dt):
     # 이전 위치 저장
     prev_x = player.x
@@ -138,6 +175,13 @@ def update(dt):
     elif player.y > map_height - collision_h:
         player.y = map_height - collision_h
 
+    # 출구 영역 체크: 던전으로 이동
+    if check_exit_zone(player.x, player.y):
+        print("======> 출구 진입: 던전으로 이동 ======>")
+        import dungeon_mode
+        game_framework.change_mode(dungeon_mode)
+        return
+
 def draw():
     clear_canvas()
     game_world.render()
@@ -146,6 +190,12 @@ def draw():
     for box in collision_boxes:
         left, bottom, right, top = box
         draw_rectangle(left, bottom, right, top)
+
+    # 출구 영역 표시 (디버그용)
+    if exit_zone:
+        left, bottom, right, top = exit_zone
+        for i in range(3):
+            draw_rectangle(left - i, bottom - i, right + i, top + i)
 
     update_canvas()
 
