@@ -20,6 +20,8 @@ tiled_map: TiledMap = None
 ui = None
 collision_boxes = []  # 충돌 영역
 npc = None
+npc_item: NPC = None
+
 
 # 던전 출구 영역 (타일 좌표 x 37~41, y 5) 우상단 길 있는 곳
 exit_zone_dungeon = None
@@ -38,7 +40,7 @@ came_from_shop = False
 
 def init():
     global player, tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop
-    global npc
+    global npc, npc_item
 
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
@@ -54,8 +56,8 @@ def init():
     player = Main_character()
 
     # NPC 생성
-
-    npc = NPC(250, 78, npc_type='fairy', name='Fairy')
+    # 요정
+    npc = NPC(250, 78, npc_type='fairy', name='요정')
     npc.image = load_image('NPC/NPC_fairy.png')
     # 이미지 크기 가져오기
     img_w = npc.image.w
@@ -68,7 +70,19 @@ def init():
     npc.frame_time = 0
     npc.draw_scale = 1.0
 
-
+    # 아이템
+    npc_item = NPC(1000, 350, npc_type='item', name='박사')
+    npc_item.image = load_image('NPC/NPC_item.png')
+    # 이미지 크기 가져오기
+    img_w = npc_item.image.w
+    img_h = npc_item.image.h
+    npc_item.width = img_w // 2
+    npc_item.height = img_h
+    npc_item.composite = False
+    npc_item.frame_max = 2
+    npc_item.frame = 0
+    npc_item.frame_time = 0
+    npc_item.draw_scale = 1.0
 
     # 상점에서 나왔다면 상점 입구 앞에 배치
     if came_from_shop:
@@ -101,7 +115,9 @@ def init():
     # NPC를 플레이어보다 먼저 추가하여 플레이어가 앞에 보이도록 함
     if npc:
         game_world.add_object(npc, 1)
-    game_world.add_object(player, 1)     # 플레이어 레이어
+    if npc_item:  # 추가: npc_item을 월드에 등록
+        game_world.add_object(npc_item, 1)
+    game_world.add_object(player, 1)  # 플레이어 레이어
 
     # 6. 출구 영역 설정
     # village 타일 크기: 10x10 픽셀
@@ -160,6 +176,7 @@ def finish():
     ui = None
     global npc
     npc = None
+    npc_item = None
 
 def handle_events():
     global show_dungeon_warning, player_at_dungeon_exit
@@ -254,6 +271,9 @@ def update(dt):
     # NPC 업데이트
     if npc is not None:
         npc.update(dt)
+
+    if npc_item is not None:
+        npc_item.update(dt)
 
     # UI 업데이트
     if ui is not None:
