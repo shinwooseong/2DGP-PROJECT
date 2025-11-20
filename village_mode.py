@@ -9,6 +9,7 @@ from tiled_map import TiledMap
 from UI import UI
 import inventory
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
+from NPC import NPC
 
 # 화면 크기
 SCREEN_WIDTH = 1280
@@ -18,6 +19,7 @@ player: Main_character = None
 tiled_map: TiledMap = None
 ui = None
 collision_boxes = []  # 충돌 영역
+npc = None
 
 # 던전 출구 영역 (타일 좌표 x 37~41, y 5) 우상단 길 있는 곳
 exit_zone_dungeon = None
@@ -36,6 +38,7 @@ came_from_shop = False
 
 def init():
     global player, tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop
+    global npc
 
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
@@ -49,6 +52,23 @@ def init():
 
     # 3. 플레이어 생성 및 초기 위치 설정
     player = Main_character()
+
+    # NPC 생성
+
+    npc = NPC(250, 78, npc_type='fairy', name='Fairy')
+    npc.image = load_image('NPC/NPC_fairy.png')
+    # 이미지 크기 가져오기
+    img_w = npc.image.w
+    img_h = npc.image.h
+    npc.width = img_w // 2
+    npc.height = img_h
+    npc.composite = True
+    npc.frame_max = 2
+    npc.frame = 0
+    npc.frame_time = 0
+    npc.draw_scale = 1.0
+
+
 
     # 상점에서 나왔다면 상점 입구 앞에 배치
     if came_from_shop:
@@ -78,6 +98,9 @@ def init():
 
     # 5. 게임 월드에 객체 추가
     game_world.add_object(tiled_map, 0)  # 배경 레이어
+    # NPC를 플레이어보다 먼저 추가하여 플레이어가 앞에 보이도록 함
+    if npc:
+        game_world.add_object(npc, 1)
     game_world.add_object(player, 1)     # 플레이어 레이어
 
     # 6. 출구 영역 설정
@@ -135,6 +158,8 @@ def finish():
     global collision_boxes, ui
     collision_boxes = []
     ui = None
+    global npc
+    npc = None
 
 def handle_events():
     global show_dungeon_warning, player_at_dungeon_exit
@@ -225,6 +250,10 @@ def update(dt):
 
     # 플레이어 업데이트
     player.update(dt)
+
+    # NPC 업데이트
+    if npc is not None:
+        npc.update(dt)
 
     # UI 업데이트
     if ui is not None:

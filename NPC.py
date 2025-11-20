@@ -1,5 +1,4 @@
 from pico2d import load_image, draw_rectangle
-from sdl2 import SDL_KEYDOWN, SDLK_SPACE, SDLK_e
 
 class NPC:
     def __init__(self, x, y, npc_type='default', name='NPC'):
@@ -22,12 +21,18 @@ class NPC:
         self.is_talking = False
         self.dialogue_index = 0
 
-
+        # 그리기 스케일 (크기 조절용)
+        self.draw_scale = 1.0
+        self.composite =False
 
         # NPC 이미지 로드
 
-        # 기본 이미지 (임시)
-        self.image = load_image('or_character/IDLE/player_idle.png')
+        # 기본 이미지 로드 시 파일이 없으면 예외 처리 (None으로 둠)
+        try:
+            self.image = load_image('or_character/IDLE/player_idle.png')
+        except Exception:
+            self.image = None
+
         self.frame = 0
         self.frame_time = 0
         self.frame_max = 4  # 애니메이션 프레임 수
@@ -36,11 +41,11 @@ class NPC:
     def _load_dialogues(self):
         pass
 
-    def update(self, dt, player):
+    def update(self, dt, player=None):
         # 애니메이션 프레임 업데이트
         if self.image:
             self.frame_time += dt
-            if self.frame_time > 0.2:  # 0.2초마다 프레임 변경
+            if self.frame_time > 1.4:  # 프레임 전환 시간 조절
                 self.frame = (self.frame + 1) % self.frame_max
                 self.frame_time = 0
 
@@ -60,13 +65,22 @@ class NPC:
         pass
 
     def draw(self):
-        if self.image:
-            # NPC 이미지 그리기 (임시로 단일 프레임)
+        if self.image and not self.composite:
+            # NPC 이미지 그리기 (프레임 애니메이션)
             self.image.clip_draw(
                 self.frame * self.width, 0,  # 소스 x, y
                 self.width, self.height,      # 소스 width, height
                 self.x, self.y,               # 목표 x, y
-                self.width * 2, self.height * 2  # 목표 width, height (2배 확대)
+                self.width * self.draw_scale, self.height * self.draw_scale  # 목표 width, height (스케일 적용)
+            )
+        elif self.image and self.composite:
+            # composite이 True면 좌우 반전으로 그리기
+            self.image.clip_composite_draw(
+                self.frame * self.width, 0,  # 소스 x, y
+                self.width, self.height,      # 소스 width, height
+                0, 'h',                       # 회전 각도, 'h'는 수평 반전
+                self.x, self.y,               # 목표 x, y
+                self.width * self.draw_scale, self.height * self.draw_scale  # 목표 width, height (스케일 적용)
             )
         else:
             # 이미지가 없으면 사각형으로 표시
@@ -106,4 +120,3 @@ class NPC:
         if left1 < right2 and right1 > left2 and bottom1 < top2 and top1 > bottom2:
             return True
         return False
-
