@@ -8,19 +8,21 @@ import game_world
 from main_chracter import Main_character
 from tiled_map import TiledMap
 from UI import UI
+from NPC import NPC
 import inventory
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
 player: Main_character = None
 tiled_map: TiledMap = None
 ui = None
+npc_water = None
 collision_boxes = []  # 충돌 영역 (레이어 1: Collisions)
 
 # 상점 진입 위치 저장 변수 (마을에서 왔는지 다른 곳에서 왔는지)
 came_from_village = True
 
 def init():
-    global player, tiled_map, collision_boxes, ui
+    global player, tiled_map, collision_boxes, ui, npc_water
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/shop.json')
@@ -33,6 +35,20 @@ def init():
     player.x = 630
     player.y = 10
 
+    # 3.5 NPC 생성
+    npc_water = NPC(310, 220, npc_type='water', name='water')
+    npc_water.image = load_image('NPC/NPC_water.png')
+    # 이미지 크기 가져오기
+    img_w = npc_water.image.w
+    img_h = npc_water.image.h
+    npc_water.width = img_w // 6
+    npc_water.height = img_h
+    npc_water.composite = True
+    npc_water.frame_max = 6
+    npc_water.frame = 0
+    npc_water.frame_time = 0
+    npc_water.draw_scale = 0.9
+
     # 3.5 UI 생성 및 등록
     ui = UI()
     ui.set_player(player)
@@ -41,6 +57,7 @@ def init():
     # 4. 게임 월드에 객체 추가
     game_world.add_object(tiled_map, 0)  # 배경 레이어
     game_world.add_object(player, 1)     # 플레이어 레이어
+    game_world.add_object(npc_water, 1)  # NPC 레이어
 
     # 디버그 정보 출력 (유지)
     print(f"======> 로드된 충돌 상자 개수: {len(collision_boxes)}")
@@ -114,6 +131,10 @@ def update(dt):
     if check_collision(player.x, player.y, player):
         player.x = prev_x
         player.y = prev_y
+    # NPC 업데이트
+    if npc_water is not None:
+        npc_water.update(dt, player)
+
 
     # 플레이어가 y축 하단으로 나가면 village_mode로 전환
     if player.y < 10:
