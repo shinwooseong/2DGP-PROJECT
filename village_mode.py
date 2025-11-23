@@ -205,15 +205,25 @@ def handle_events():
             elif event.key == SDLK_u:
                 # 다이얼로그 표시 중이 아닐 때만 인벤토리 열기
                 if not show_dungeon_warning and not show_npc_dialogue:
+                    inventory.set_player(player)  # 플레이어 전달
                     game_framework.push_mode(inventory)
             elif event.key == SDLK_RETURN:
-                # 엔터 키로 NPC와 상호작용 또는 대화 종료
-                if show_npc_dialogue:
-                    # 이미 대화 중이면 대화 종료
+                # 던전 다이얼로그 표시 중이면 던전 진입
+                if show_dungeon_warning:
+                    print("던전 진입 확인")
+                    show_dungeon_warning = False
+
+                    # 플레이어 키 입력 상태 초기화 (던전 진입 전)
+                    player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
+
+                    import dungeon_mode
+                    game_framework.change_mode(dungeon_mode)
+                # NPC 대화 표시 중이면 대화 종료
+                elif show_npc_dialogue:
                     print("NPC 대화 종료")
                     show_npc_dialogue = False
+                # NPC가 범위 안에 있으면 대화 시작
                 elif active_npc is not None:
-                    # NPC가 범위 안에 있으면 대화 시작
                     print(f"NPC와 상호작용: {active_npc.name}")
                     show_npc_dialogue = True
             else:
