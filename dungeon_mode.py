@@ -174,6 +174,7 @@ def handle_events():
             if event.key == SDLK_ESCAPE:
                 game_framework.quit()
             elif event.key == SDLK_u:
+                inventory.set_player(player)  # 플레이어 전달
                 game_framework.push_mode(inventory)
             elif event.key == SDLK_RETURN:
                 # ENTER 키를 누르면 shop_mode로 전환
@@ -321,8 +322,8 @@ def update(dt):
 
         # death 애니메이션이 완전히 끝난 몬스터만 제거하고 전리품 생성
         if not monster.alive and monster.animator.is_animation_finished():
-            # 전리품 생성
-            loot = Loot(monster.x, monster.y, 'coin', random.randint(1, 5))
+            # 전리품 생성 (item_type=None이면 loot1~loot4 중 랜덤)
+            loot = Loot(monster.x, monster.y, item_type=None, quantity=random.randint(1, 3))
             loots.append(loot)
             game_world.add_object(loot, 1)  # 플레이어와 같은 레이어
 
@@ -387,9 +388,16 @@ def update(dt):
         # 플레이어가 수집 범위에 있는지 확인
         if loot.check_collection(player.x, player.y):
             item_info = loot.get_item_info()
-            # 배낭에 추가
-            inventory.add_item(item_info['type'], item_info['quantity'])
-            print(f"[COLLECT] 수집: {item_info['type']} x{item_info['quantity']}")
+            # 플레이어의 loot_inventory에 직접 추가
+            loot_type = item_info['type']
+            quantity = item_info['quantity']
+
+            # loot_type이 loot_inventory에 있으면 추가
+            if loot_type in player.loot_inventory:
+                player.loot_inventory[loot_type] += quantity
+                print(f"[COLLECT] 수집: {loot_type} x{quantity} (총: {player.loot_inventory[loot_type]})")
+            else:
+                print(f"[WARNING] 알 수 없는 전리품 타입: {loot_type}")
 
         # 수집 완료되거나 제거 대상이면 표시
         if should_remove or loot.collected:

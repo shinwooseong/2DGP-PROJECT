@@ -11,16 +11,9 @@ class Loot:
         'LOOT/loot4.png',
     ]
 
-    def __init__(self, x, y, item_type, quantity=1):
-        """
-        Args:
-            x, y: 전리품 위치
-            item_type: 'coin', 'potion', 'key' 등
-            quantity: 개수
-        """
+    def __init__(self, x, y, item_type=None, quantity=1):
         self.x = x
         self.y = y
-        self.item_type = item_type
         self.quantity = quantity
         self.collected = False
         self.collection_time = 0.0
@@ -30,19 +23,25 @@ class Loot:
         self.spawn_time = 0.0
         self.collection_delay = 1.0  # 1초 딜레이
 
-        # 이미지 로드 - LOOT 폴더에서 랜덤 선택
+        # 이미지 로드 - LOOT 폴더에서 선택
         self.image = None
         self.sprite_w = 32
         self.sprite_h = 32
 
-        image_path = random.choice(self.LOOT_IMAGES)
-        try:
-            self.image = load_image(image_path)
-            self.sprite_w = self.image.w
-            self.sprite_h = self.image.h
-            print(f"✓ 전리품 이미지 로드 성공: {image_path} ({self.sprite_w}x{self.sprite_h})")
-        except Exception as e:
-            print(f"✗ 전리품 이미지 로드 오류 ({image_path}): {e}")
+        # item_type이 지정되지 않으면 랜덤 선택
+        if item_type is None:
+            # 랜덤으로 loot1~loot4 중 선택
+            loot_index = random.randint(1, 4)
+            item_type = f'loot{loot_index}'
+
+        self.item_type = item_type
+
+        # item_type에 맞는 이미지 로드
+        image_path = f'LOOT/{item_type}.png'
+
+        self.image = load_image(image_path)
+        self.sprite_w = self.image.w
+        self.sprite_h = self.image.h
 
         # 충돌 범위 (자동 수집 거리)
         self.collect_range = 80  # 플레이어로부터 이 거리 안에서 자동 수집

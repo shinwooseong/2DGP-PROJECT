@@ -104,6 +104,7 @@ def handle_events():
             elif event.key == SDLK_u:
                 # 대화 중이 아닐 때만 인벤토리 열기
                 if not show_npc_dialogue:
+                    inventory.set_player(player)  # 플레이어 전달
                     game_framework.push_mode(inventory)
             elif event.key == SDLK_RETURN:
                 # 엔터 키로 NPC와 상호작용 또는 대화 종료
