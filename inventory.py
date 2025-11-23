@@ -10,44 +10,40 @@ import main_chracter
 SCREEN_W, SCREEN_H = main_chracter.SCREEN_W, main_chracter.SCREEN_H
 
 backpack_image = None
-loot_images = []  # LOOT 폴더의 이미지들
+loot_images = {}  # loot1 ~ loot4 이미지 딕셔너리
+number_font = None
 
-# 배낭 데이터 (전역)
-inventory_items = {}
-
-# 배낭 UI 설정
-INVENTORY_SLOTS = 6  # 배낭 슬롯 개수
-SLOT_SIZE = 48  # 각 슬롯 크기 (픽셀)
-SLOT_SPACING = 8  # 슬롯 간격
+# 현재 플레이어 참조
+current_player = None
 
 
 def init():
-    global backpack_image, loot_images, inventory_items
+    global backpack_image, loot_images, number_font
+
     try:
         backpack_image = load_image('UI/backpack_in.png')
     except Exception as e:
         print(f"배낭 이미지 로드 오류: {e}")
         backpack_image = None
 
-    # LOOT 폴더의 이미지들 로드
-    loot_images = []
+    # LOOT 이미지들 로드 (loot1 ~ loot4)
+    loot_images = {}
     for i in range(1, 5):
         loot_img = load_image(f'LOOT/loot{i}.png')
-        loot_images.append(loot_img)
+        loot_images[f'loot{i}'] = loot_img
 
 
-    # inventory_items 초기화하지 않기! (데이터 보존)
-    # 이미 초기화된 경우만 빈 딕셔너리로 설정
-    if not inventory_items:
-        inventory_items = {}
+    # 숫자 폰트 로드
+    number_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 32)
+
 
 
 def finish():
-    global backpack_image, loot_images, inventory_items
+    global backpack_image, loot_images, number_font
     if backpack_image:
         del backpack_image
-    loot_images = []
-    inventory_items = {}
+    loot_images = {}
+    number_font = None
 
 
 def handle_events():
@@ -62,17 +58,10 @@ def update(dt):
     pass
 
 
-def add_item(item_type, quantity=1):
-    # 배낭에 아이템 추가하기
-    if item_type not in inventory_items:
-        inventory_items[item_type] = 0
-    inventory_items[item_type] += quantity
-    print(f"[INVENTORY] {item_type} x{quantity} 추가됨 (총: {inventory_items[item_type]})")
-
-
-def get_inventory_items():
-    # 배낭 아이템 반환
-    return inventory_items.copy()
+def set_player(player):
+    # 프레이어 참조하기
+    global current_player
+    current_player = player
 
 
 def draw():
@@ -89,69 +78,55 @@ def draw():
         img_h = backpack_image.h
 
         # 스케일 계산
-        scale_w = (SCREEN_W * 0.9) / img_w
-        scale_h = (SCREEN_H * 0.9) / img_h
+        scale_w = (SCREEN_W * 0.6) / img_w
+        scale_h = (SCREEN_H * 0.6) / img_h
         scale = min(scale_w, scale_h)
 
         draw_w = int(img_w * scale)
         draw_h = int(img_h * scale)
+
+        # 배낭 그리기
         backpack_image.draw(center_x, center_y, draw_w, draw_h)
 
-        # 배낭 우측 상단에 전리품 표시
-        loot_display_x = center_x + (draw_w // 2) - 150
-        loot_display_y = center_y - (draw_h // 2) + 80
+        # 배낭을 4등분해서 전리품 표시 -> 이것때문에 배낭이미지 변경함
+        if current_player and loot_images:
+            # 4등분 영역 계산
+            slot_width = draw_w // 2
+            slot_height = draw_h // 2
 
-        # 아이템 그리기
-        if loot_images:
-            current_items = get_inventory_items()
-            print(f"[배낭 표시] 현재 배낭 데이터: {current_items}, 로드된 이미지: {len(loot_images)}개")
+            # 시작 위치 (배낭 좌측 상단)
+            start_x = center_x - draw_w // 2
+            start_y = center_y + draw_h // 2
 
-            if current_items:
-                item_index = 0
-                for item_type, quantity in current_items.items():
-                    if item_index >= 4:
-                        break
+            # 각 슬롯 중앙 위치 계산
+            slots = [
+                (start_x + slot_width // 2, start_y - slot_height // 2),      # 좌상
+                (start_x + slot_width // 2 + slot_width, start_y - slot_height // 2),  # 우상
+                (start_x + slot_width // 2, start_y - slot_height // 2 - slot_height),  # 좌하
+                (start_x + slot_width // 2 + slot_width, start_y - slot_height // 2 - slot_height)  # 우하
+            ]
 
-                    # 각 아이템을 가로로 배치
-                    icon_x = loot_display_x + item_index * 100
-                    icon_y = loot_display_y
+            # loot1 ~ loot4 순서대로 그리기
+            loot_keys = ['loot1', 'loot2', 'loot3', 'loot4']
 
-                    # LOOT 이미지 선택
-                    loot_img = loot_images[item_index % len(loot_images)]
+            for i, loot_key in enumerate(loot_keys):
+                if loot_key in loot_images:
+                    slot_x, slot_y = slots[i]
+                    loot_count = current_player.loot_inventory.get(loot_key, 0)
 
-                    # 아이콘 배경 (진한 갈색)
-                    icon_size = int(60 * scale)
-                    draw_rectangle(
-                        icon_x - icon_size // 2, icon_y - icon_size // 2,
-                        icon_x + icon_size // 2, icon_y + icon_size // 2
-                    )
+                    # 전리품 이미지 그리기
+                    loot_img = loot_images[loot_key]
+                    img_size = int(min(slot_width, slot_height) * 0.6)
 
-                    # LOOT 이미지 그리기
-                    try:
-                        loot_img.draw(icon_x, icon_y, int(icon_size * 0.8), int(icon_size * 0.8))
-                        print(f"[슬롯 {item_index}] {item_type}x{quantity} 그려짐 at ({icon_x}, {icon_y})")
-                    except Exception as e:
-                        print(f"✗ LOOT 이미지 그리기 오류: {e}")
+                    # 이미지를 약간 위로 올려서 숫자와 겹치지 않게
+                    img_y = slot_y + 20
+                    loot_img.draw(slot_x, img_y, img_size, img_size)
 
-                    # 개수 텍스트 (우측 하단)
-                    if quantity > 0:
-                        try:
-                            font = load_font(None, int(18 * scale))
-                            font.draw(
-                                int(icon_x + icon_size // 2 - 15),
-                                int(icon_y - icon_size // 2 + 8),
-                                str(quantity),
-                                (255, 255, 0)
-                            )
-                            print(f"[텍스트] 개수 {quantity} 표시")
-                        except Exception as e:
-                            print(f"✗ 텍스트 그리기 오류: {e}")
+                    # 개수 표시 (이미지 아래)
+                    if number_font:
+                        text_y = slot_y - 40
+                        number_font.draw(slot_x - 20, text_y, f"{loot_count}", (255, 255, 255))
 
-                    item_index += 1
-            else:
-                print(f"[배낭] 수집한 아이템 없음")
-        else:
-            print(f"[배낭] LOOT 이미지 로드 실패")
 
     update_canvas()
 
