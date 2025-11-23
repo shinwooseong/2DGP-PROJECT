@@ -40,6 +40,58 @@ class NPC:
         self.frame_time = 0
         self.frame_max = 4  # 애니메이션 프레임 수
 
+    # 요정 NPC 거래 확인
+    def can_trade_fairy(self, player):
+        # 요정 NPC는 전리품 각각을 3개씩 받아서
+        # 최대 체력을 늘려주는 역할을 한다.
+        if self.npc_type != 'fairy':
+            return False
+
+        # 최대 체력이 이미 200이면 거래 불가
+        if player.max_health >= 200:
+            return False
+
+        # 전리품 각각 3개씩 있는지 확인
+        for loot_key in ['loot1', 'loot2', 'loot3', 'loot4']:
+            if player.loot_inventory.get(loot_key, 0) < 3:
+                return False
+
+        return True
+
+    # 요정 NPC 거래 실행
+    def trade_fairy(self, player):
+        if not self.can_trade_fairy(player):
+            return False
+
+        # 전리품 소모 (각각 3개씩)
+        for loot_key in ['loot1', 'loot2', 'loot3', 'loot4']:
+            player.loot_inventory[loot_key] -= 3
+
+        # 최대 체력 증가 (최대 200까지)
+        player.max_health = min(player.max_health + 50, 200)
+        # 현재 체력도 증가된 최대 체력만큼 회복
+        player.health = min(player.health + 50, player.max_health)
+
+        print(f"[요정 거래] 최대 체력 증가! 현재 최대 체력: {player.max_health}")
+        return True
+
+    # 대화 메시지 가져오기
+    def get_dialogue(self, player):
+        # NPC 따라서 다른 대화를 하게 함
+        if self.npc_type == 'fairy':
+            if player.max_health >= 200:
+                return "이미 최대 체력이 200입니다!"
+            elif self.can_trade_fairy(player):
+                return "전리품을 가져왔군요!\n최대 체력을 50 증가시켜드릴게요!"
+            else:
+                return "전리품 각각 3개씩 가져오면\n최대 체력을 50 올려드려요!"
+        elif self.npc_type == 'item':
+            return "안녕하세요!"
+        elif self.npc_type == 'water':
+            return "어서오세요!"
+        else:
+            return "안녕하세요!"
+
     # NPC 대화
     def _load_dialogues(self):
         pass

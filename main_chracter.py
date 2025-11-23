@@ -30,16 +30,16 @@ class Main_character:
         self.frame = 0
 
         # 3. 스탯
-        self.health = 200
-        self.max_health = 200
+        self.health = 100
+        self.max_health = 100
         self.money = 0
 
         # 전리품 인벤토리 (loot1 ~ loot4 각각의 개수)
         self.loot_inventory = {
-            'loot1': 0,
-            'loot2': 0,
-            'loot3': 0,
-            'loot4': 0
+            'loot1': 3,
+            'loot2': 3,
+            'loot3': 3,
+            'loot4': 3
         }
 
         # 캐릭터별 공격력 설정

@@ -1,5 +1,5 @@
 from pico2d import *
-from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDL_KEYUP, SDLK_ESCAPE, SDLK_u, SDLK_RETURN, SDLK_SPACE
+from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDL_KEYUP, SDLK_ESCAPE, SDLK_u, SDLK_RETURN, SDLK_SPACE, SDLK_y, SDLK_n
 
 import game_framework
 import game_world
@@ -29,6 +29,7 @@ exit_zone_shop = None
 
 # 다이얼로그 관련 변수
 dialogue_box_image = None
+npc_dialogue_box_image = None  # NPC 대화용 이미지 추가
 dialogue_font = None
 show_dungeon_warning = False  # 던전 경고 다이얼로그 표시 여부
 player_at_dungeon_exit = False  # 플레이어가 던전 출구 영역에 있는지
@@ -41,10 +42,11 @@ came_from_shop = False
 
 def init():
     global player, tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop
-    global npc, npc_item
+    global npc, npc_item, npc_dialogue_box_image
 
     # 다이얼로그 이미지와 폰트 로드
-    dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
+    dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')  # 던전 입구용
+    npc_dialogue_box_image = load_image('UI/NPC_text.png')  # NPC 대화용
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
 
     # 1. 타일드 맵 로드
@@ -200,6 +202,10 @@ def handle_events():
                     player.y -= 50
 
                     print("던전 진입 취소 - 플레이어를 입구 밖으로 이동")
+                elif show_npc_dialogue:
+                    # NPC 대화 중 ESC를 누르면 대화 종료
+                    print("NPC 대화 종료")
+                    show_npc_dialogue = False
                 else:
                     game_framework.quit()
             elif event.key == SDLK_u:
@@ -207,6 +213,24 @@ def handle_events():
                 if not show_dungeon_warning and not show_npc_dialogue:
                     inventory.set_player(player)  # 플레이어 전달
                     game_framework.push_mode(inventory)
+            elif event.key == SDLK_y:
+                # Y 키: 요정 NPC와 거래 실행
+                if show_npc_dialogue and active_npc is not None and active_npc.npc_type == 'fairy':
+                    if active_npc.can_trade_fairy(player):
+                        # 거래 실행
+                        if active_npc.trade_fairy(player):
+                            print(f"[거래 성공] 최대 체력: {player.max_health}, 현재 체력: {player.health}")
+                            print(f"남은 전리품: loot1={player.loot_inventory.get('loot1', 0)}, "
+                                  f"loot2={player.loot_inventory.get('loot2', 0)}, "
+                                  f"loot3={player.loot_inventory.get('loot3', 0)}, "
+                                  f"loot4={player.loot_inventory.get('loot4', 0)}")
+                        # 거래 후에도 대화창은 유지 (업데이트된 전리품 개수 확인 가능)
+            elif event.key == SDLK_n:
+                # N 키: 거래 취소 (대화 종료)
+                if show_npc_dialogue and active_npc is not None and active_npc.npc_type == 'fairy':
+                    if active_npc.can_trade_fairy(player):
+                        print("거래 취소")
+                        show_npc_dialogue = False
             elif event.key == SDLK_RETURN:
                 # 던전 다이얼로그 표시 중이면 던전 진입
                 if show_dungeon_warning:
@@ -220,8 +244,11 @@ def handle_events():
                     game_framework.change_mode(dungeon_mode)
                 # NPC 대화 표시 중이면 대화 종료
                 elif show_npc_dialogue:
-                    print("NPC 대화 종료")
-                    show_npc_dialogue = False
+                    # 요정 NPC이고 거래 가능한 상태가 아니면 대화 종료
+                    if active_npc is None or active_npc.npc_type != 'fairy' or not active_npc.can_trade_fairy(player):
+                        print("NPC 대화 종료")
+                        show_npc_dialogue = False
+                    # 요정 NPC이고 거래 가능한 상태면 Y/N을 기다림 (엔터로는 종료 안됨)
                 # NPC가 범위 안에 있으면 대화 시작
                 elif active_npc is not None:
                     print(f"NPC와 상호작용: {active_npc.name}")
@@ -387,21 +414,64 @@ def draw():
                            "네(Enter)    아니요(ESC)", (15, 15, 15))
 
     # NPC 대화 표시
-    if show_npc_dialogue and active_npc is not None and dialogue_box_image and dialogue_font:
-        # 다이얼로그 박스 그리기 (화면 중앙)
-        dialogue_box_image.draw(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+    if show_npc_dialogue and active_npc is not None and npc_dialogue_box_image and dialogue_font:
+        # 다이얼로그 박스 그리기 (화면 중앙) - NPC 전용 이미지 사용
+        npc_dialogue_box_image.draw(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
+        # 시작 Y 위치를 위쪽으로 조정
+        start_y = SCREEN_HEIGHT // 2 + 180
 
         # NPC 이름 표시
-        dialogue_font.draw(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 30,
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 50, start_y,
                            active_npc.name, (0, 0, 255))
 
-        # NPC와의 대화 내용 표시
-        dialogue_font.draw(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 10,
-                           "안녕하세요!", (0, 0, 0))
+        # NPC별 대화 내용 표시
+        dialogue_text = active_npc.get_dialogue(player)
 
-        # 대화 종료 안내
-        dialogue_font.draw(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50,
-                           "종료: 엔터", (15, 15, 15))
+        # 줄바꿈 처리 (\n으로 구분)
+        lines = dialogue_text.split('\n')
+        y_offset = 0
+        for line in lines:
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 150, start_y - 40 - y_offset,  # 이름 아래 40픽셀
+                               line, (0, 0, 0))
+            y_offset += 35  # 줄 간격
+
+        # 요정 NPC인 경우 전리품 개수 표시
+        if active_npc.npc_type == 'fairy':
+            # 전리품 개수 표시 (대화 내용 아래)
+            loot_y_position = start_y - 40 - y_offset - 20  # 대화 내용과 간격
+
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 150, loot_y_position,
+                               "보유 전리품:", (50, 50, 50))
+
+            # 각 전리품 개수 표시 (세로로 나열)
+            loot_names = ['loot1', 'loot2', 'loot3', 'loot4']
+            loot_display_names = ['전리품1', '전리품2', '전리품3', '전리품4']
+
+            for i, (loot_key, display_name) in enumerate(zip(loot_names, loot_display_names)):
+                loot_count = player.loot_inventory.get(loot_key, 0)
+                # 3개 이상이면 빨간색, 아니면 검은색
+                color = (255, 0, 0) if loot_count >= 3 else (0, 0, 0)
+
+                loot_text = f"{display_name}: {loot_count}/3"
+                # 세로로 배치 (각 줄마다 35픽셀 간격)
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 150, loot_y_position - 35 - (i * 35),
+                                   loot_text, color)
+
+            # 거래 가능 여부에 따라 안내 메시지 변경 (전리품 4개 아래)
+            button_y_position = loot_y_position - 35 - (4 * 35) - 10  # 전리품 목록 아래
+            if active_npc.can_trade_fairy(player):
+                # 거래 가능하면 Y/N 선택 표시
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 150, button_y_position,
+                                   "거래하시겠습니까?", (50, 50, 50))
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 150, button_y_position - 35,
+                                   "거래: Y     거래 취소: N", (125, 215, 12))
+            else:
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 100, button_y_position,
+                                   "종료: Enter 또는 ESC", (15, 15, 15))
+        else:
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 100, start_y - 40 - y_offset - 20,
+                               "종료: Enter 또는 ESC", (15, 15, 15))
 
     update_canvas()
 
