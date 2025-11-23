@@ -12,17 +12,31 @@ from NPC import NPC
 import inventory
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
+# 화면 크기
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 736
+
 player: Main_character = None
 tiled_map: TiledMap = None
 ui = None
 npc_water = None
 collision_boxes = []  # 충돌 영역 (레이어 1: Collisions)
 
+# NPC 대화 관련 변수
+show_npc_dialogue = False  # NPC 대화 표시 여부
+active_npc = None  # 현재 상호작용 중인 NPC
+dialogue_box_image = None
+dialogue_font = None
+
 # 상점 진입 위치 저장 변수 (마을에서 왔는지 다른 곳에서 왔는지)
 came_from_village = True
 
 def init():
-    global player, tiled_map, collision_boxes, ui, npc_water
+    global player, tiled_map, collision_boxes, ui, npc_water, dialogue_box_image, dialogue_font
+
+    # 다이얼로그 이미지와 폰트 로드
+    dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
+    dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/shop.json')
@@ -78,6 +92,8 @@ def finish():
     ui = None
 
 def handle_events():
+    global show_npc_dialogue, active_npc
+
     events = get_events()
     for event in events:
         if event.type == SDL_QUIT:
@@ -86,15 +102,27 @@ def handle_events():
             if event.key == SDLK_ESCAPE:
                 game_framework.quit()
             elif event.key == SDLK_u:
-                game_framework.push_mode(inventory)
+                # 대화 중이 아닐 때만 인벤토리 열기
+                if not show_npc_dialogue:
+                    game_framework.push_mode(inventory)
             elif event.key == SDLK_RETURN:
-                # ENTER 키를 누르면 dungeon_mode로 전환
-                import dungeon_mode
-                game_framework.change_mode(dungeon_mode)
+                # 엔터 키로 NPC와 상호작용 또는 대화 종료
+                if show_npc_dialogue:
+                    # 이미 대화 중이면 대화 종료
+                    print("NPC 대화 종료")
+                    show_npc_dialogue = False
+                elif active_npc is not None:
+                    # NPC가 범위 안에 있으면 대화 시작
+                    print(f"NPC와 상호작용: {active_npc.name}")
+                    show_npc_dialogue = True
             else:
-                player.handle_event(event)
+                # 대화 중이 아닐 때만 플레이어 이동
+                if not show_npc_dialogue:
+                    player.handle_event(event)
         else:
-            player.handle_event(event)
+            # 대화 중이 아닐 때만 플레이어 이동
+            if not show_npc_dialogue:
+                player.handle_event(event)
 
 def check_collision(x, y, player):
     """플레이어의 위치가 충돌 박스와 충돌하는지 확인 (실제 캐릭터 크기 사용)"""
@@ -116,6 +144,12 @@ def check_collision(x, y, player):
     return False
 
 def update(dt):
+    global show_npc_dialogue, active_npc
+
+    # 대화 중이면 플레이어 업데이트 중단
+    if show_npc_dialogue:
+        return
+
     # 이전 위치 저장
     prev_x = player.x
     prev_y = player.y
@@ -123,7 +157,15 @@ def update(dt):
     # 플레이어 업데이트
     player.update(dt)
 
-    # UI 업데이트 (try...except 제거)
+    # NPC 업데이트 및 상호작용 체크
+    active_npc = None  # 매 프레임마다 리셋
+
+    if npc_water is not None:
+        npc_water.update(dt, player=player)
+        if npc_water.can_interact:
+            active_npc = npc_water
+
+    # UI 업데이트
     if ui is not None:
         ui.update(dt)
 
@@ -131,10 +173,6 @@ def update(dt):
     if check_collision(player.x, player.y, player):
         player.x = prev_x
         player.y = prev_y
-    # NPC 업데이트
-    if npc_water is not None:
-        npc_water.update(dt, player)
-
 
     # 플레이어가 y축 하단으로 나가면 village_mode로 전환
     if player.y < 10:
@@ -153,6 +191,22 @@ def draw():
         left, bottom, right, top = box
         draw_rectangle(left, bottom, right, top)
 
+    # NPC 대화 표시
+    if show_npc_dialogue and active_npc is not None and dialogue_box_image and dialogue_font:
+        # 다이얼로그 박스 그리기 (화면 중앙)
+        dialogue_box_image.draw(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
+        # NPC 이름 표시
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 30,
+                           active_npc.name, (0, 0, 255))
+
+        # NPC와의 대화 내용 표시
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 10,
+                           "안녕하세요!", (0, 0, 0))
+
+        # 대화 종료 안내
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50,
+                           "종료: 엔터", (15, 15, 15))
 
     update_canvas()
 

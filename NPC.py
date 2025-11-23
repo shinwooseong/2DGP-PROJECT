@@ -23,15 +23,18 @@ class NPC:
 
         # 그리기 스케일 (크기 조절용)
         self.draw_scale = 1.0
-        self.composite =False
+        self.composite = False
 
         # NPC 이미지 로드
-
         # 기본 이미지 로드 시 파일이 없으면 예외 처리 (None으로 둠)
         try:
             self.image = load_image('or_character/IDLE/player_idle.png')
         except Exception:
             self.image = None
+
+        # 상호작용 UI 이미지 로드
+        self.interaction_ui_image = load_image('UI/NPC_close.png')
+
 
         self.frame = 0
         self.frame_time = 0
@@ -91,9 +94,20 @@ class NPC:
                 self.y + self.height // 2
             )
 
+        # 상호작용 가능할 때 UI 표시
+        if self.can_interact:
+            self.draw_interaction_ui()
+
     # 상호작용 UI 그리기
     def draw_interaction_ui(self, font=None):
-        pass
+        if self.interaction_ui_image:
+            ui_scale = 0.8
+            ui_width = self.interaction_ui_image.w * ui_scale
+            ui_height = self.interaction_ui_image.h * ui_scale
+            # NPC 오른쪽 옆에 표시
+            ui_x = self.x + self.width * self.draw_scale // 2 + ui_width // 2 + 10
+            ui_y = self.y + self.height * self.draw_scale // 4
+            self.interaction_ui_image.draw(ui_x, ui_y, ui_width, ui_height)
 
     # 충돌 박스 반환
     def get_collision_box(self):
