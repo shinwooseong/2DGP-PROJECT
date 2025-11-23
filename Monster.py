@@ -640,7 +640,7 @@ class Trash_Monster(Monster):
         }
         frame_time = {'idle': 0.1, 'sleep': 0.1, 'damaged1': 0.08, 'damaged2': 0.08, 'attack': 0.07, 'death': 0.2}
         self.animator = Animator('', frames_map, frame_time, layout='grid', single_image_path=sheet_path)
-        self.combat = Combat(attack_power=10, attack_range=50, cooldown=1.5, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
+        self.combat = Combat(attack_power=25, attack_range=50, cooldown=1.5, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=300)
         # start sleeping until player detected
         self.animator.set_state('sleep')

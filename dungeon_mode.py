@@ -233,7 +233,7 @@ def change_to_dungeon2():
 
     # 플레이어 위치 설정 (던전2 시작 위치)
     player.x = 640
-    player.y = 200
+    player.y = 50
 
     # UI 다시 생성
     global ui
@@ -246,7 +246,7 @@ def change_to_dungeon2():
     game_world.add_object(player, 1)
 
     # 던전2 몬스터 생성
-    spawn_random_monsters(count=1)
+    spawn_random_monsters(count=2)
 
     # 던전2도 상단 문 위치에 출구 설정
     exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)

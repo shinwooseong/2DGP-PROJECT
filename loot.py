@@ -64,7 +64,7 @@ class Loot:
     def draw(self):
         if self.image:
 
-            scale = 0.8
+            scale = 0.4
             draw_w = int(self.sprite_w * scale)
             draw_h = int(self.sprite_h * scale)
             self.image.draw(self.x, self.y, draw_w, draw_h)
