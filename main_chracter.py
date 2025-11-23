@@ -34,6 +34,14 @@ class Main_character:
         self.max_health = 200
         self.money = 0
 
+        # 전리품 인벤토리 (loot1 ~ loot4 각각의 개수)
+        self.loot_inventory = {
+            'loot1': 0,
+            'loot2': 0,
+            'loot3': 0,
+            'loot4': 0
+        }
+
         # 캐릭터별 공격력 설정
         self.base_attack = 20  # 기본 캐릭터 공격력
         self.transform_attack = 10  # 변신 캐릭터 공격력
