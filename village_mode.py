@@ -225,10 +225,18 @@ def handle_events():
                                   f"loot3={player.loot_inventory.get('loot3', 0)}, "
                                   f"loot4={player.loot_inventory.get('loot4', 0)}")
                         # 거래 후에도 대화창은 유지 (업데이트된 전리품 개수 확인 가능)
+                # Y 키: 아이템 NPC와 거래 실행
+                elif show_npc_dialogue and active_npc is not None and active_npc.npc_type == 'item':
+                    if active_npc.can_trade_item(player):
+                        # 거래 실행
+                        if active_npc.trade_item(player):
+                            print(f"[거래 성공] 현재 소지금: {player.money}골드")
+                        # 거래 후에도 대화창은 유지
             elif event.key == SDLK_n:
                 # N 키: 거래 취소 (대화 종료)
-                if show_npc_dialogue and active_npc is not None and active_npc.npc_type == 'fairy':
-                    if active_npc.can_trade_fairy(player):
+                if show_npc_dialogue and active_npc is not None:
+                    if (active_npc.npc_type == 'fairy' and active_npc.can_trade_fairy(player)) or \
+                       (active_npc.npc_type == 'item' and active_npc.can_trade_item(player)):
                         print("거래 취소")
                         show_npc_dialogue = False
             elif event.key == SDLK_RETURN:
@@ -244,11 +252,17 @@ def handle_events():
                     game_framework.change_mode(dungeon_mode)
                 # NPC 대화 표시 중이면 대화 종료
                 elif show_npc_dialogue:
-                    # 요정 NPC이고 거래 가능한 상태가 아니면 대화 종료
-                    if active_npc is None or active_npc.npc_type != 'fairy' or not active_npc.can_trade_fairy(player):
+                    # 거래 가능한 상태가 아니면 대화 종료
+                    if active_npc is None:
                         print("NPC 대화 종료")
                         show_npc_dialogue = False
-                    # 요정 NPC이고 거래 가능한 상태면 Y/N을 기다림 (엔터로는 종료 안됨)
+                    elif active_npc.npc_type == 'fairy' and not active_npc.can_trade_fairy(player):
+                        print("NPC 대화 종료")
+                        show_npc_dialogue = False
+                    elif active_npc.npc_type == 'item' and not active_npc.can_trade_item(player):
+                        print("NPC 대화 종료")
+                        show_npc_dialogue = False
+                    # 거래 가능한 상태면 Y/N을 기다림 (엔터로는 종료 안됨)
                 # NPC가 범위 안에 있으면 대화 시작
                 elif active_npc is not None:
                     print(f"NPC와 상호작용: {active_npc.name}")
@@ -466,6 +480,51 @@ def draw():
                                    "거래하시겠습니까?", (50, 50, 50))
                 dialogue_font.draw(SCREEN_WIDTH // 2 - 150, button_y_position - 35,
                                    "거래: Y     거래 취소: N", (125, 215, 12))
+            else:
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 100, button_y_position,
+                                   "종료: Enter 또는 ESC", (15, 15, 15))
+        # 아이템 NPC인 경우 전리품 개수와 가격 표시
+        elif active_npc.npc_type == 'item':
+            from loot import Loot
+
+            # 전리품 개수 표시 (대화 내용 아래)
+            loot_y_position = start_y - 40 - y_offset - 20
+
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 150, loot_y_position,
+                               "보유 전리품:", (50, 50, 50))
+
+            # 각 전리품 개수와 가격 표시 (세로로 나열)
+            loot_names = ['loot1', 'loot2', 'loot3', 'loot4']
+            loot_display_names = ['전리품1', '전리품2', '전리품3', '전리품4']
+
+            total_value = 0
+            for i, (loot_key, display_name) in enumerate(zip(loot_names, loot_display_names)):
+                loot_count = player.loot_inventory.get(loot_key, 0)
+                price = Loot.LOOT_PRICES.get(loot_key, 0)
+                item_total = loot_count * price
+                total_value += item_total
+
+                # 1개 이상이면 초록색, 없으면 검은색
+                color = (0, 150, 0) if loot_count > 0 else (100, 100, 100)
+
+                loot_text = f"{display_name}: {loot_count}개 (개당 {price}G)"
+                # 세로로 배치 (각 줄마다 35픽셀 간격)
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 150, loot_y_position - 35 - (i * 35),
+                                   loot_text, color)
+
+            # 총 판매 금액 표시
+            total_y_position = loot_y_position - 35 - (4 * 35) - 10
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 150, total_y_position,
+                               f"총 판매 금액: {total_value}G", (255, 100, 0))
+
+            # 거래 가능 여부에 따라 안내 메시지 변경
+            button_y_position = total_y_position - 40
+            if active_npc.can_trade_item(player):
+                # 거래 가능하면 Y/N 선택 표시
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 150, button_y_position,
+                                   "전리품을 판매하시겠습니까?", (50, 50, 50))
+                dialogue_font.draw(SCREEN_WIDTH // 2 - 150, button_y_position - 35,
+                                   "판매: Y     취소: N", (125, 215, 12))
             else:
                 dialogue_font.draw(SCREEN_WIDTH // 2 - 100, button_y_position,
                                    "종료: Enter 또는 ESC", (15, 15, 15))

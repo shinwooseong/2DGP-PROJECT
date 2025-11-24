@@ -1,4 +1,5 @@
 from pico2d import load_image, draw_rectangle
+from loot import Loot
 
 class NPC:
     def __init__(self, x, y, npc_type='default', name='NPC'):
@@ -75,6 +76,40 @@ class NPC:
         print(f"[요정 거래] 최대 체력 증가! 현재 최대 체력: {player.max_health}")
         return True
 
+    # 아이템 NPC 거래 확인 (전리품 판매)
+    def can_trade_item(self, player):
+        # item NPC는 플레이어가 가진 전리품을 돈으로 바꿔준다
+        if self.npc_type != 'item':
+            return False
+
+        # 전리품이 하나라도 있으면 거래 가능 -> 수정 할 것임. 개별 판매 기능으로
+        for loot_key in ['loot1', 'loot2', 'loot3', 'loot4']:
+            if player.loot_inventory.get(loot_key, 0) > 0:
+                return True
+
+        return False
+
+    # 아이템 NPC 거래 실행 (전리품 판매)
+    def trade_item(self, player):
+        if not self.can_trade_item(player):
+            return False
+
+        total_earned = 0
+
+        # 모든 전리품을 팔아서 돈으로 변환
+        for loot_key in ['loot1', 'loot2', 'loot3', 'loot4']:
+            count = player.loot_inventory.get(loot_key, 0)
+            if count > 0:
+                price = Loot.LOOT_PRICES.get(loot_key, 0)
+                earned = price * count
+                total_earned += earned
+                player.loot_inventory[loot_key] = 0
+                print(f"[아이템 거래] {loot_key} {count}개 판매: {earned}골드")
+
+        player.money += total_earned
+        print(f"[아이템 거래] 총 획득 금액: {total_earned}골드, 현재 소지금: {player.money}골드")
+        return True
+
     # 대화 메시지 가져오기
     def get_dialogue(self, player):
         # NPC 따라서 다른 대화를 하게 함
@@ -86,7 +121,10 @@ class NPC:
             else:
                 return "전리품 각각 3개씩 가져오면\n최대 체력을 50 올려드려요!"
         elif self.npc_type == 'item':
-            return "안녕하세요!"
+            if self.can_trade_item(player):
+                return "전리품을 가져왔군요!\n전리품을 팔아드릴게요!"
+            else:
+                return "전리품을 가져오면\n돈으로 바꿔드려요!"
         elif self.npc_type == 'water':
             return "어서오세요!"
         else:
