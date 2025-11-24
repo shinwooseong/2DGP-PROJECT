@@ -214,6 +214,7 @@ class Attack:
 
         self.frame_time_acc += dt
 
+        # 공격 중 이동 처리
         dx = 0.0
         dy = 0.0
         move_speed = 70.0
@@ -224,9 +225,12 @@ class Attack:
         if self.character.key_map['LEFT']:
             dx -= move_speed * dt
         if self.character.key_map['RIGHT']:
-            # 이동 적용 (경계 제한은 각 게임 모드에서 처리)
-            self.character.x += dx
-            self.character.y += dy
+            dx += move_speed * dt
+
+        # 이동 적용 (경계 제한)
+        if dx != 0.0 or dy != 0.0:
+            collision_half_w = CHARACTER_COLLISION_W // 2
+            collision_half_h = CHARACTER_COLLISION_H // 2
 
             self.character.x = max(collision_half_w, min(SCREEN_W - collision_half_w, self.character.x + dx))
             self.character.y = max(collision_half_h, min(SCREEN_H - collision_half_h, self.character.y + dy))
