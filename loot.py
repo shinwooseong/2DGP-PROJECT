@@ -11,6 +11,14 @@ class Loot:
         'LOOT/loot4.png',
     ]
 
+    # 전리품별 가격 설정
+    LOOT_PRICES = {
+        'loot1': 10,   # 가장 흔함
+        'loot2': 30,   # 흔함
+        'loot3': 70,   # 희귀
+        'loot4': 150,  # 매우 희귀
+    }
+
     def __init__(self, x, y, item_type=None, quantity=1):
         self.x = x
         self.y = y
@@ -28,10 +36,11 @@ class Loot:
         self.sprite_w = 32
         self.sprite_h = 32
 
-        # item_type이 지정되지 않으면 랜덤 선택
+        # item_type이 지정되지 않으면 가중치 랜덤 선택
         if item_type is None:
-            # 랜덤으로 loot1~loot4 중 선택
-            loot_index = random.randint(1, 4)
+            # 가중치 기반 랜덤 선택 (loot1이 가장 높고, loot4가 가장 낮음)
+            weights = [50, 30, 15, 5]  # loot1: 50%, loot2: 30%, loot3: 15%, loot4: 5%
+            loot_index = random.choices([1, 2, 3, 4], weights=weights, k=1)[0]
             item_type = f'loot{loot_index}'
 
         self.item_type = item_type
