@@ -34,6 +34,9 @@ class Main_character:
         self.max_health = 100
         self.money = 0
 
+        # 포션 개수
+        self.hp_potion_count = 0
+
         # 전리품 인벤토리 (loot1 ~ loot4 각각의 개수)
         self.loot_inventory = {
             'loot1': 3,
