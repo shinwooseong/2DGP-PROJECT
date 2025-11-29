@@ -39,10 +39,10 @@ class Main_character:
 
         # 전리품 인벤토리 (loot1 ~ loot4 각각의 개수)
         self.loot_inventory = {
-            'loot1': 3,
-            'loot2': 3,
-            'loot3': 3,
-            'loot4': 3
+            'loot1': 7,
+            'loot2': 7,
+            'loot3': 7,
+            'loot4': 7
         }
 
         # 캐릭터별 공격력 설정
@@ -283,6 +283,25 @@ class Main_character:
         print(f"Player took {damage} dmg. HP={self.health}")
         if self.health <= 0:
             print("Player died")
+
+    def use_potion(self):
+        # 포션 기능 추가 (hp 50)
+        if self.hp_potion_count > 0:
+            # 체력이 이미 최대치면 사용 불가
+            if self.health >= self.max_health:
+                print("[포션] 체력이 이미 최대입니다!")
+                return False
+
+            # 포션 사용
+            self.hp_potion_count -= 1
+            heal_amount = 50
+            self.health = min(self.health + heal_amount, self.max_health)
+
+            print(f"[포션 사용] 체력 {heal_amount} 회복! 현재 체력: {self.health}/{self.max_health}, 남은 포션: {self.hp_potion_count}")
+            return True
+        else:
+            print("[포션] 포션이 없습니다!")
+            return False
 
     def handle_event(self, event):
         if event.type == SDL_KEYDOWN:

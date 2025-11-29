@@ -110,6 +110,28 @@ class NPC:
         print(f"[아이템 거래] 총 획득 금액: {total_earned}골드, 현재 소지금: {player.money}골드")
         return True
 
+    # 물 NPC 거래 확인 (포션 구매)
+    def can_trade_water(self, player):
+        # water NPC는 100골드로 포션 2개를 판다
+        if self.npc_type != 'water':
+            return False
+
+        # 100골드 이상 있으면 거래 가능
+        return player.money >= 100
+
+    # 물 NPC 거래 실행 (포션 구매)
+    def trade_water(self, player):
+        if not self.can_trade_water(player):
+            return False
+
+        # 100골드 차감
+        player.money -= 100
+        # 포션 2개 추가
+        player.hp_potion_count += 2
+
+        print(f"[물 거래] 포션 2개 구매! 현재 포션: {player.hp_potion_count}개, 현재 소지금: {player.money}골드")
+        return True
+
     # 대화 메시지 가져오기
     def get_dialogue(self, player):
         # NPC 따라서 다른 대화를 하게 함
@@ -126,7 +148,10 @@ class NPC:
             else:
                 return "전리품을 가져오면\n돈으로 바꿔드려요!"
         elif self.npc_type == 'water':
-            return "어서오세요!"
+            if self.can_trade_water(player):
+                return "포션을 구매하시겠습니까?\n100골드에 포션 2개를 드립니다!"
+            else:
+                return "포션은 100골드에 2개입니다!\n돈이 부족하네요."
         else:
             return "안녕하세요!"
 
