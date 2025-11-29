@@ -4,6 +4,7 @@ from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u, SDLK_RETURN
 
 import game_framework
 import game_world
+import server
 
 from main_chracter import Main_character
 from tiled_map import TiledMap
@@ -16,7 +17,6 @@ from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TR
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 736
 
-player: Main_character = None
 tiled_map: TiledMap = None
 ui = None
 npc_water = None
@@ -32,7 +32,7 @@ dialogue_font = None
 came_from_village = True
 
 def init():
-    global player, tiled_map, collision_boxes, ui, npc_water, dialogue_box_image, dialogue_font
+    global tiled_map, collision_boxes, ui, npc_water, dialogue_box_image, dialogue_font
 
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
@@ -44,10 +44,9 @@ def init():
     # 2. 충돌 영역 설정 (레이어 1)
     collision_boxes = tiled_map.get_collision_boxes()
 
-    # 3. 플레이어 생성 및 초기 위치 설정 (상점 입구 위치: 하단 중앙보다 약간 오른쪽)
-    player = Main_character()
-    player.x = 630
-    player.y = 10
+    # 3.  초기 위치 설정 (상점 입구 위치: 하단 중앙보다 약간 오른쪽)
+    server.player.x = 630
+    server.player.y = 10
 
     # 3.5 NPC 생성
     npc_water = NPC(310, 220, npc_type='water', name='water')
@@ -65,12 +64,12 @@ def init():
 
     # 3.5 UI 생성 및 등록
     ui = UI()
-    ui.set_player(player)
+    ui.set_player(server.player)
     game_world.add_object(ui, 2)
 
     # 4. 게임 월드에 객체 추가
     game_world.add_object(tiled_map, 0)  # 배경 레이어
-    game_world.add_object(player, 1)     # 플레이어 레이어
+    game_world.add_object(server.player, 1)     # 플레이어 레이어
     game_world.add_object(npc_water, 1)  # NPC 레이어
 
     # 디버그 정보 출력 (유지)
@@ -104,12 +103,18 @@ def handle_events():
             elif event.key == SDLK_u:
                 # 대화 중이 아닐 때만 인벤토리 열기
                 if not show_npc_dialogue:
-                    inventory.set_player(player)  # 플레이어 전달
+                    inventory.set_player(server.player)  # 플레이어 전달
                     game_framework.push_mode(inventory)
             elif event.key == SDLK_RETURN:
                 # 엔터 키로 NPC와 상호작용 또는 대화 종료
                 if show_npc_dialogue:
-                    # 이미 대화 중이면 대화 종료
+                    # 대화 중이면 거래 실행 후 대화 종료
+                    if active_npc is not None and active_npc.npc_type == 'water':
+                        # 물 NPC와 거래 (포션 구매)
+                        if active_npc.trade_water(server.player):
+                            print(f"[거래 성공] 포션 2개 구매! 현재 포션: {server.player.hp_potion_count}개")
+                        else:
+                            print("[거래 실패] 돈이 부족합니다!")
                     print("NPC 대화 종료")
                     show_npc_dialogue = False
                 elif active_npc is not None:
@@ -119,11 +124,11 @@ def handle_events():
             else:
                 # 대화 중이 아닐 때만 플레이어 이동
                 if not show_npc_dialogue:
-                    player.handle_event(event)
+                    server.player.handle_event(event)
         else:
             # 대화 중이 아닐 때만 플레이어 이동
             if not show_npc_dialogue:
-                player.handle_event(event)
+                server.player.handle_event(event)
 
 def check_collision(x, y, player):
     """플레이어의 위치가 충돌 박스와 충돌하는지 확인 (실제 캐릭터 크기 사용)"""
@@ -152,17 +157,17 @@ def update(dt):
         return
 
     # 이전 위치 저장
-    prev_x = player.x
-    prev_y = player.y
+    prev_x = server.player.x
+    prev_y = server.player.y
 
     # 플레이어 업데이트
-    player.update(dt)
+    server.player.update(dt)
 
     # NPC 업데이트 및 상호작용 체크
     active_npc = None  # 매 프레임마다 리셋
 
     if npc_water is not None:
-        npc_water.update(dt, player=player)
+        npc_water.update(dt, player=server.player)
         if npc_water.can_interact:
             active_npc = npc_water
 
@@ -171,12 +176,12 @@ def update(dt):
         ui.update(dt)
 
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
-    if check_collision(player.x, player.y, player):
-        player.x = prev_x
-        player.y = prev_y
+    if check_collision(server.player.x, server.player.y, server.player):
+        server.player.x = prev_x
+        server.player.y = prev_y
 
     # 플레이어가 y축 하단으로 나가면 village_mode로 전환
-    if player.y < 10:
+    if server.player.y < 10:
         print("======> 상점 나가기 - 마을로 이동 ======>")
         import village_mode
         village_mode.came_from_shop = True  # 상점에서 나왔다는 플래그 설정
@@ -192,22 +197,39 @@ def draw():
         left, bottom, right, top = box
         draw_rectangle(left, bottom, right, top)
 
+    # NPC와 상호작용 가능할 때 UI 표시
+    if active_npc is not None and active_npc.can_interact and not show_npc_dialogue:
+        if active_npc.interaction_ui_image:
+            # NPC 위에 상호작용 아이콘 표시
+            active_npc.interaction_ui_image.draw(active_npc.x, active_npc.y + 60, 40, 40)
+
     # NPC 대화 표시
     if show_npc_dialogue and active_npc is not None and dialogue_box_image and dialogue_font:
         # 다이얼로그 박스 그리기 (화면 중앙)
         dialogue_box_image.draw(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
         # NPC 이름 표시
-        dialogue_font.draw(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 30,
+        dialogue_font.draw(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT // 2 + 80,
                            active_npc.name, (0, 0, 255))
 
-        # NPC와의 대화 내용 표시
-        dialogue_font.draw(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 10,
-                           "안녕하세요!", (0, 0, 0))
+        # NPC와의 대화 내용 표시 (실제 NPC 대사 사용)
+        dialogue_text = active_npc.get_dialogue(server.player)
+        lines = dialogue_text.split('\n')
 
-        # 대화 종료 안내
-        dialogue_font.draw(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50,
-                           "종료: 엔터", (15, 15, 15))
+        # 여러 줄로 표시
+        y_offset = 30
+        for line in lines:
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 + y_offset,
+                               line, (0, 0, 0))
+            y_offset -= 40
+
+        # 거래 안내 또는 대화 종료 안내
+        if active_npc.npc_type == 'water' and active_npc.can_trade_water(server.player):
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 60,
+                               "구매: 엔터", (100, 100, 100))
+        else:
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 60,
+                               "종료: 엔터", (100, 100, 100))
 
     update_canvas()
 
