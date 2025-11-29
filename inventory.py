@@ -4,6 +4,7 @@ import random
 
 import game_framework
 import game_world
+import server
 
 import main_chracter
 
@@ -89,7 +90,7 @@ def draw():
         backpack_image.draw(center_x, center_y, draw_w, draw_h)
 
         # 배낭을 4등분해서 전리품 표시 -> 이것때문에 배낭이미지 변경함
-        if current_player and loot_images:
+        if server.player and loot_images:
             # 4등분 영역 계산
             slot_width = draw_w // 2
             slot_height = draw_h // 2

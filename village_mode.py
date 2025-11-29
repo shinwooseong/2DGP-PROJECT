@@ -3,6 +3,7 @@ from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDL_KEYUP, SDLK_ESCAPE, SDLK_u, SDLK_RET
 
 import game_framework
 import game_world
+import server
 
 from main_chracter import Main_character
 from tiled_map import TiledMap
@@ -15,7 +16,6 @@ from NPC import NPC
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 736
 
-player: Main_character = None
 tiled_map: TiledMap = None
 ui = None
 collision_boxes = []  # 충돌 영역
@@ -41,7 +41,7 @@ active_npc = None  # 현재 상호작용 중인 NPC
 came_from_shop = False
 
 def init():
-    global player, tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop
+    global tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop
     global npc, npc_item, npc_dialogue_box_image
 
     # 다이얼로그 이미지와 폰트 로드
@@ -55,8 +55,6 @@ def init():
     # 2. 충돌 영역 설정
     collision_boxes = tiled_map.get_collision_boxes()
 
-    # 3. 플레이어 생성 및 초기 위치 설정
-    player = Main_character()
 
     # NPC 생성
     # 요정
@@ -100,17 +98,17 @@ def init():
         shop_entrance_x = 77.5 * tile_size * scale + offset_x
         shop_entrance_y = (map_height_px - 22 * tile_size) * scale + offset_y
 
-        player.x = shop_entrance_x
-        player.y = shop_entrance_y
+        server.player.x = shop_entrance_x
+        server.player.y = shop_entrance_y
         came_from_shop = False  # 플래그 리셋
     else:
         # 기본 시작 위치
-        player.x = 640  # 시작 X 좌표
-        player.y = 400  # 시작 Y 좌표
+        server.player.x = 640  # 시작 X 좌표
+        server.player.y = 400  # 시작 Y 좌표
 
     # 4. UI 생성 및 등록
     ui = UI()
-    ui.set_player(player)
+    ui.set_player(server.player)
     game_world.add_object(ui, 2)
 
     # 5. 게임 월드에 객체 추가
@@ -120,7 +118,7 @@ def init():
         game_world.add_object(npc, 1)
     if npc_item:  # 추가: npc_item을 월드에 등록
         game_world.add_object(npc_item, 1)
-    game_world.add_object(player, 1)  # 플레이어 레이어
+    game_world.add_object(server.player, 1)  # 플레이어 레이어
 
     # 6. 출구 영역 설정
     # village 타일 크기: 10x10 픽셀
@@ -196,10 +194,10 @@ def handle_events():
                     player_at_dungeon_exit = False  # 출구 영역 상태 리셋
 
                     # 플레이어 키 입력 상태 초기화 (계속 직진 방지)
-                    player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
+                    server.player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
                     # 플레이어를 출구 영역 밖으로 이동 (아래쪽으로 50픽셀)
-                    player.y -= 50
+                    server.player.y -= 50
 
                     print("던전 진입 취소 - 플레이어를 입구 밖으로 이동")
                 elif show_npc_dialogue:
@@ -211,32 +209,32 @@ def handle_events():
             elif event.key == SDLK_u:
                 # 다이얼로그 표시 중이 아닐 때만 인벤토리 열기
                 if not show_dungeon_warning and not show_npc_dialogue:
-                    inventory.set_player(player)  # 플레이어 전달
+                    inventory.set_player(server.player)  # 플레이어 전달
                     game_framework.push_mode(inventory)
             elif event.key == SDLK_y:
                 # Y 키: 요정 NPC와 거래 실행
                 if show_npc_dialogue and active_npc is not None and active_npc.npc_type == 'fairy':
-                    if active_npc.can_trade_fairy(player):
+                    if active_npc.can_trade_fairy(server.player):
                         # 거래 실행
-                        if active_npc.trade_fairy(player):
-                            print(f"[거래 성공] 최대 체력: {player.max_health}, 현재 체력: {player.health}")
-                            print(f"남은 전리품: loot1={player.loot_inventory.get('loot1', 0)}, "
-                                  f"loot2={player.loot_inventory.get('loot2', 0)}, "
-                                  f"loot3={player.loot_inventory.get('loot3', 0)}, "
-                                  f"loot4={player.loot_inventory.get('loot4', 0)}")
+                        if active_npc.trade_fairy(server.player):
+                            print(f"[거래 성공] 최대 체력: {server.player.max_health}, 현재 체력: {server.player.health}")
+                            print(f"남은 전리품: loot1={server.player.loot_inventory.get('loot1', 0)}, "
+                                  f"loot2={server.player.loot_inventory.get('loot2', 0)}, "
+                                  f"loot3={server.player.loot_inventory.get('loot3', 0)}, "
+                                  f"loot4={server.player.loot_inventory.get('loot4', 0)}")
                         # 거래 후에도 대화창은 유지 (업데이트된 전리품 개수 확인 가능)
                 # Y 키: 아이템 NPC와 거래 실행
                 elif show_npc_dialogue and active_npc is not None and active_npc.npc_type == 'item':
-                    if active_npc.can_trade_item(player):
+                    if active_npc.can_trade_item(server.player):
                         # 거래 실행
-                        if active_npc.trade_item(player):
-                            print(f"[거래 성공] 현재 소지금: {player.money}골드")
+                        if active_npc.trade_item(server.player):
+                            print(f"[거래 성공] 현재 소지금: {server.player.money}골드")
                         # 거래 후에도 대화창은 유지
             elif event.key == SDLK_n:
                 # N 키: 거래 취소 (대화 종료)
                 if show_npc_dialogue and active_npc is not None:
-                    if (active_npc.npc_type == 'fairy' and active_npc.can_trade_fairy(player)) or \
-                       (active_npc.npc_type == 'item' and active_npc.can_trade_item(player)):
+                    if (active_npc.npc_type == 'fairy' and active_npc.can_trade_fairy(server.player)) or \
+                       (active_npc.npc_type == 'item' and active_npc.can_trade_item(server.player)):
                         print("거래 취소")
                         show_npc_dialogue = False
             elif event.key == SDLK_RETURN:
@@ -246,7 +244,7 @@ def handle_events():
                     show_dungeon_warning = False
 
                     # 플레이어 키 입력 상태 초기화 (던전 진입 전)
-                    player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
+                    server.player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
                     import dungeon_mode
                     game_framework.change_mode(dungeon_mode)
@@ -256,10 +254,10 @@ def handle_events():
                     if active_npc is None:
                         print("NPC 대화 종료")
                         show_npc_dialogue = False
-                    elif active_npc.npc_type == 'fairy' and not active_npc.can_trade_fairy(player):
+                    elif active_npc.npc_type == 'fairy' and not active_npc.can_trade_fairy(server.player):
                         print("NPC 대화 종료")
                         show_npc_dialogue = False
-                    elif active_npc.npc_type == 'item' and not active_npc.can_trade_item(player):
+                    elif active_npc.npc_type == 'item' and not active_npc.can_trade_item(server.player):
                         print("NPC 대화 종료")
                         show_npc_dialogue = False
                     # 거래 가능한 상태면 Y/N을 기다림 (엔터로는 종료 안됨)
@@ -270,15 +268,15 @@ def handle_events():
             else:
                 # 다이얼로그 표시 중이 아닐 때만 플레이어 이동
                 if not show_dungeon_warning and not show_npc_dialogue:
-                    player.handle_event(event)
+                    server.player.handle_event(event)
         elif event.type == SDL_KEYUP:
             # 다이얼로그 표시 중이 아닐 때만 플레이어 이동
             if not show_dungeon_warning and not show_npc_dialogue:
-                player.handle_event(event)
+                server.player.handle_event(event)
         else:
             # 다이얼로그 표시 중이 아닐 때만 플레이어 이동
             if not show_dungeon_warning and not show_npc_dialogue:
-                player.handle_event(event)
+                server.player.handle_event(event)
 
 def check_collision(x, y, player):
     # 변신 상태에 따라 다른 충돌 범위 사용
@@ -313,22 +311,22 @@ def update(dt):
         return
 
     # 이전 위치 저장
-    prev_x = player.x
-    prev_y = player.y
+    prev_x = server.player.x
+    prev_y = server.player.y
 
     # 플레이어 업데이트
-    player.update(dt)
+    server.player.update(dt)
 
     # NPC 업데이트 및 상호작용 체크
     active_npc = None  # 매 프레임마다 리셋
 
     if npc is not None:
-        npc.update(dt, player=player)
+        npc.update(dt, player=server.player)
         if npc.can_interact:
             active_npc = npc
 
     if npc_item is not None:
-        npc_item.update(dt, player=player)
+        npc_item.update(dt, player=server.player)
         if npc_item.can_interact and active_npc is None:  # 하나의 NPC만 활성화
             active_npc = npc_item
 
@@ -337,16 +335,16 @@ def update(dt):
         ui.update(dt)
 
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
-    if check_collision(player.x, player.y, player):
-        player.x = prev_x
-        player.y = prev_y
+    if check_collision(server.player.x, server.player.y, server.player):
+        server.player.x = prev_x
+        server.player.y = prev_y
 
     # 맵 경계 제한
     map_width = tiled_map.map_width_px
     map_height = tiled_map.map_height_px
 
     # 플레이어 충돌 박스 크기 고려
-    if player.is_transformed:
+    if server.player.is_transformed:
         collision_w = TRANSFORM_COLLISION_W // 2
         collision_h = TRANSFORM_COLLISION_H // 2
     else:
@@ -354,18 +352,18 @@ def update(dt):
         collision_h = CHARACTER_COLLISION_H // 2
 
     # 플레이어가 맵 밖으로 나가지 않도록 제한
-    if player.x < collision_w:
-        player.x = collision_w
-    elif player.x > map_width - collision_w:
-        player.x = map_width - collision_w
+    if server.player.x < collision_w:
+        server.player.x = collision_w
+    elif server.player.x > map_width - collision_w:
+        server.player.x = map_width - collision_w
 
-    if player.y < collision_h:
-        player.y = collision_h
-    elif player.y > map_height - collision_h:
-        player.y = map_height - collision_h
+    if server.player.y < collision_h:
+        server.player.y = collision_h
+    elif server.player.y > map_height - collision_h:
+        server.player.y = map_height - collision_h
 
     # 던전 출구 영역 체크
-    at_dungeon_exit = check_exit_zone(player.x, player.y, exit_zone_dungeon)
+    at_dungeon_exit = check_exit_zone(server.player.x, server.player.y, exit_zone_dungeon)
 
     # 플레이어가 던전 출구 영역에 처음 진입했을 때만 다이얼로그 표시
     if at_dungeon_exit and not player_at_dungeon_exit:
@@ -377,7 +375,7 @@ def update(dt):
         player_at_dungeon_exit = False
 
     # 상점 출구 영역 체크 (경고 없이 바로 진입)
-    at_shop_exit = check_exit_zone(player.x, player.y, exit_zone_shop)
+    at_shop_exit = check_exit_zone(server.player.x, server.player.y, exit_zone_shop)
 
     if at_shop_exit and not player_at_shop_exit:
         print("======> 상점 입구 진입! ======>")
@@ -440,7 +438,7 @@ def draw():
                            active_npc.name, (0, 0, 255))
 
         # NPC별 대화 내용 표시
-        dialogue_text = active_npc.get_dialogue(player)
+        dialogue_text = active_npc.get_dialogue(server.player)
 
         # 줄바꿈 처리 (\n으로 구분)
         lines = dialogue_text.split('\n')
@@ -463,7 +461,7 @@ def draw():
             loot_display_names = ['전리품1', '전리품2', '전리품3', '전리품4']
 
             for i, (loot_key, display_name) in enumerate(zip(loot_names, loot_display_names)):
-                loot_count = player.loot_inventory.get(loot_key, 0)
+                loot_count = server.player.loot_inventory.get(loot_key, 0)
                 # 3개 이상이면 빨간색, 아니면 검은색
                 color = (255, 0, 0) if loot_count >= 3 else (0, 0, 0)
 
@@ -474,7 +472,7 @@ def draw():
 
             # 거래 가능 여부에 따라 안내 메시지 변경 (전리품 4개 아래)
             button_y_position = loot_y_position - 35 - (4 * 35) - 10  # 전리품 목록 아래
-            if active_npc.can_trade_fairy(player):
+            if active_npc.can_trade_fairy(server.player):
                 # 거래 가능하면 Y/N 선택 표시
                 dialogue_font.draw(SCREEN_WIDTH // 2 - 150, button_y_position,
                                    "거래하시겠습니까?", (50, 50, 50))
@@ -499,7 +497,7 @@ def draw():
 
             total_value = 0
             for i, (loot_key, display_name) in enumerate(zip(loot_names, loot_display_names)):
-                loot_count = player.loot_inventory.get(loot_key, 0)
+                loot_count = server.player.loot_inventory.get(loot_key, 0)
                 price = Loot.LOOT_PRICES.get(loot_key, 0)
                 item_total = loot_count * price
                 total_value += item_total
@@ -519,7 +517,7 @@ def draw():
 
             # 거래 가능 여부에 따라 안내 메시지 변경
             button_y_position = total_y_position - 40
-            if active_npc.can_trade_item(player):
+            if active_npc.can_trade_item(server.player):
                 # 거래 가능하면 Y/N 선택 표시
                 dialogue_font.draw(SCREEN_WIDTH // 2 - 150, button_y_position,
                                    "전리품을 판매하시겠습니까?", (50, 50, 50))
