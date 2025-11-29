@@ -66,6 +66,9 @@ class UI:
         self.or_character_head = _load('UI/or_character_head.png')  # 기본 캐릭터 얼굴
         self.tr_character_head = _load('UI/tr_character_head.png')  # 변신 캐릭터 얼굴
 
+        # 펜던트 이미지 (던전에서만 표시)
+        self.pendant_img = _load('UI/pendant_Icon.png')
+
         # hp 변화에 따른 변수 추가
         self.hp_part_left = _load('UI/hp_image/1.png')
         self.hp_part_mid = _load('UI/hp_image/2.png')
@@ -77,6 +80,9 @@ class UI:
         self.hp_0_part_mid = _load('UI/hp_image/8.png')
         self.hp_0_part_right = _load('UI/hp_image/9.png')
         self.hp_decor = _load('UI/hp_image/13.png')
+
+        # 던전 모드 플래그 (던전에서만 펜던트 표시)
+        self.is_in_dungeon = False
 
     def set_player(self, player):
         self.player = player
@@ -271,6 +277,23 @@ class UI:
                 potion_count = getattr(self.player, 'hp_potion_count', 0)
                 # 아이콘 오른쪽 하단에 개수 표시 (노란색으로 변경)
                 self.font.draw(potion_x + icon_size // 4, top_y - icon_size // 4, f'{potion_count}', (255, 255, 0))
+
+        # 펜던트 아이콘 (던전 모드에서만 표시 - 우하단)
+        if self.is_in_dungeon and self.pendant_img:
+            # 우하단에 표시할 펜던트 설정
+            pendant_size = 144  # 크기
+            pendant_margin = 10  # 화면 가장자리로부터의 여백
+
+            # 우하단 위치 계산
+            pendant_x = screen_w - pendant_margin - pendant_size // 4
+            pendant_y = pendant_margin + pendant_size // 2
+
+            # 펜던트 그리기
+            self.pendant_img.draw(pendant_x, pendant_y, pendant_size, pendant_size)
+
+            # 'Z' 텍스트
+            if self.font:
+                self.font.draw(pendant_x - pendant_size // 2 - 10, pendant_y - 5, 'Z', (255, 255, 255))
 
     def draw(self):
         SCREEN_W = main_chracter.SCREEN_W

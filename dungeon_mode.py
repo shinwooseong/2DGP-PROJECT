@@ -1,6 +1,6 @@
 from pico2d import *
 import pico2d as _pico2d
-from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u, SDLK_RETURN
+from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_ESCAPE, SDLK_u, SDLK_RETURN, SDLK_z, SDLK_y, SDLK_n, SDLK_s
 import random
 
 import game_framework
@@ -32,6 +32,12 @@ exit_zone = None  # 출구 영역 (문 위치에 따라 설정할 것임)
 # 카메라 변수
 camera_x = 0
 camera_y = 0
+
+# 귀환 관련 변수
+pendant_image = None  # 펜던트 이미지
+show_return_prompt = False  # 귀환 확인 메시지 표시 여부
+return_cost = 200  # 귀환 비용
+dialogue_font = None  # 대화 폰트
 
 def is_position_valid(x, y, min_distance=100):
     """위치가 충돌 박스와 겹치지 않고, 다른 몬스터와도 충분히 떨어져 있는지 확인"""
@@ -90,16 +96,22 @@ def spawn_random_monsters(count=5):
     print(f"총 {len(monsters)}마리의 몬스터 생성 완료!")
 
 def init():
-    global tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone
+    global tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone, pendant_image, dialogue_font, show_return_prompt
 
 
     # 던전 맵 1이 던전 시작맵임.
     current_dungeon = 1
     all_monsters_cleared = False
+    show_return_prompt = False  # 귀환 프롬프트 초기화
 
     # 메시지 폰트 로드
     message_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 32)
 
+    # 대화 폰트 로드 (귀환 확인용)
+    dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
+
+    # 펜던트 이미지 로드
+    pendant_image = load_image('UI/pendant_Icon.png')
 
     # 1. 타일드 맵 로드 (던전 맵 사용 - 카메라 미사용)
     if current_dungeon == 1:
@@ -122,6 +134,7 @@ def init():
     # 4. UI 생성 및 등록
     ui = UI()
     ui.set_player(server.player)
+    ui.is_in_dungeon = True  # 던전 모드임을 표시
     game_world.add_object(ui, 2)
 
     # 5. 게임 월드에 객체 추가
@@ -180,6 +193,34 @@ def handle_events():
                 # ENTER 키를 누르면 shop_mode로 전환
                 import shop_mode
                 game_framework.change_mode(shop_mode)
+            elif event.key == SDLK_z:
+                # Z 키: 귀환 펜던트 사용
+                global show_return_prompt
+                show_return_prompt = True
+                print("귀환 펜던트 사용 - 확인 메시지 표시")
+            elif event.key == SDLK_y:
+                # Y 키: 귀환 확인 프롬프트에서 귀환 선택
+                if show_return_prompt:
+                    # 돈이 충분한지 확인
+                    if server.player.money >= return_cost:
+                        # 돈 차감
+                        server.player.money -= return_cost
+                        print(f"[귀환] {return_cost}골드 지불, 남은 돈: {server.player.money}골드")
+
+                        # 마을로 이동
+                        show_return_prompt = False
+                        import village_mode
+                        village_mode.came_from_dungeon = True
+                        game_framework.change_mode(village_mode)
+                        print("귀환 중...")
+                    else:
+                        print(f"[귀환 실패] 돈이 부족합니다. (필요: {return_cost}골드, 현재: {server.player.money}골드)")
+                        show_return_prompt = False
+            elif event.key == SDLK_n:
+                # N 키: 귀환 확인 프롬프트에서 취소 선택
+                if show_return_prompt:
+                    show_return_prompt = False
+                    print("귀환 취소")
             else:
                 server.player.handle_event(event)
         else:
@@ -310,6 +351,7 @@ def update(dt):
 
     # 게임 오버 체크 (플레이어가 죽었을 때)
     if getattr(server.player, 'is_dead', False):
+        print("======> 게임 오버! 마을로 부활합니다 ======>")
 
         # 전리품을 1/3로 감소 (소수점 버림)
         for loot_key in server.player.loot_inventory:
@@ -317,6 +359,12 @@ def update(dt):
             new_count = original_count // 3
             server.player.loot_inventory[loot_key] = new_count
             print(f"[전리품 손실] {loot_key}: {original_count} -> {new_count}")
+
+        # 돈도 1/3로 감소 (소수점 버림)
+        original_money = server.player.money
+        new_money = original_money // 3
+        server.player.money = new_money
+        print(f"[돈 손실] {original_money}골드 -> {new_money}골드")
 
         # 플레이어 상태 복구
         server.player.health = server.player.max_health  # 체력 전체 회복
@@ -583,6 +631,17 @@ def draw():
         message_font.draw(screen_center_x - 180, screen_center_y + 50, message, (255, 255, 0))
         hint = "(상단 문으로 이동하세요)"
         message_font.draw(screen_center_x - 150, screen_center_y + 10, hint, (200, 200, 200))
+
+    # 귀환 펜던트 사용 안내 메시지 (화면 중앙에 표시)
+    if show_return_prompt and dialogue_font is not None:
+        screen_center_x = SCREEN_WIDTH // 2
+        screen_center_y = SCREEN_HEIGHT // 2
+        message = "귀환 펜던트를 사용하시겠습니까?"
+        dialogue_font.draw(screen_center_x - 180, screen_center_y + 50, message, (255, 255, 0))
+        cost_message = f"비용: {return_cost} 골드"
+        dialogue_font.draw(screen_center_x - 180, screen_center_y + 10, cost_message, (255, 255, 255))
+        hint_message = "Y: 예 / N: 아니오"
+        dialogue_font.draw(screen_center_x - 180, screen_center_y - 30, hint_message, (200, 200, 200))
 
     update_canvas()
 
