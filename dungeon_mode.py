@@ -171,19 +171,19 @@ def handle_events():
             if event.key == SDLK_ESCAPE:
                 game_framework.quit()
             elif event.key == SDLK_u:
-                inventory.set_player(player)  # 플레이어 전달
+                inventory.set_player(server.player)  # 플레이어 전달
                 game_framework.push_mode(inventory)
             elif event.key == SDLK_s:
                 # S 키: 포션 사용
-                player.use_potion()
+                server.player.use_potion()
             elif event.key == SDLK_RETURN:
                 # ENTER 키를 누르면 shop_mode로 전환
                 import shop_mode
                 game_framework.change_mode(shop_mode)
             else:
-                player.handle_event(event)
+                server.player.handle_event(event)
         else:
-            player.handle_event(event)
+            server.player.handle_event(event)
 
 def check_collision(x, y, player):
     # 실제 캐릭터 크기를 지정해서 충돌박스 만들기!
@@ -255,7 +255,7 @@ def change_to_dungeon2():
     print(f"던전2 로드 완료: 몬스터 {len(monsters)}마리")
 
 def change_to_boss_room():
-    global player, tiled_map, collision_boxes, monsters, loots, current_dungeon, all_monsters_cleared, exit_zone
+    global tiled_map, collision_boxes, monsters, loots, current_dungeon, all_monsters_cleared, exit_zone
 
     print("======> 보스방으로 이동 ======>")
 
@@ -283,18 +283,18 @@ def change_to_boss_room():
             print(f"  박스 {i}: {box}")
 
     # 플레이어 위치 설정 (보스방 시작 위치)
-    player.x = 640
-    player.y = 200
+    server.player.x = 640
+    server.player.y = 200
 
     # UI 다시 생성
     global ui
     ui = UI()
-    ui.set_player(player)
+    ui.set_player(server.player)
     game_world.add_object(ui, 2)
 
     # 게임 월드에 다시 추가
     game_world.add_object(tiled_map, 0)
-    game_world.add_object(player, 1)
+    game_world.add_object(server.player, 1)
 
     # 보스 몬스터 생성 (보스 1마리만)
     # 나중에 보스 클래스를 만들면 여기서 생성하기
