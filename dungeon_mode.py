@@ -5,6 +5,7 @@ import random
 
 import game_framework
 import game_world
+import server
 
 from main_chracter import Main_character
 from tiled_map import TiledMap
@@ -18,7 +19,6 @@ from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TR
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 736
 
-player: Main_character = None
 tiled_map: TiledMap = None
 ui = None
 collision_boxes = []  # 충돌 영역
@@ -90,10 +90,8 @@ def spawn_random_monsters(count=5):
     print(f"총 {len(monsters)}마리의 몬스터 생성 완료!")
 
 def init():
-    global player, tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone
+    global tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone
 
-    # 0. 인벤토리 초기화 (이미지 로드)
-    #inventory.init()
 
     # 던전 맵 1이 던전 시작맵임.
     current_dungeon = 1
@@ -114,22 +112,21 @@ def init():
     collision_boxes = tiled_map.get_collision_boxes()
 
     # 3. 플레이어 생성 및 초기 위치 설정(맵 다 설정하면 위치 재설정 할 것임)
-    player = Main_character()
     if current_dungeon == 1:
-        player.x = 640  # 던전1 시작 X 좌표 (중앙)
-        player.y = 200  # 던전1 시작 Y 좌표
+        server.player.x = 640  # 던전1 시작 X 좌표 (중앙)
+        server.player.y = 200  # 던전1 시작 Y 좌표
     else:
-        player.x = 640  # 던전2 시작 X 좌표
-        player.y = 200  # 던전2 시작 Y 좌표
+        server.player.x = 640  # 던전2 시작 X 좌표
+        server.player.y = 200  # 던전2 시작 Y 좌표
 
     # 4. UI 생성 및 등록
     ui = UI()
-    ui.set_player(player)
+    ui.set_player(server.player)
     game_world.add_object(ui, 2)
 
     # 5. 게임 월드에 객체 추가
     game_world.add_object(tiled_map, 0)  # 배경 레이어
-    game_world.add_object(player, 1)     # 플레이어 레이어
+    game_world.add_object(server.player, 1)     # 플레이어 레이어
 
     # 6. 몬스터들을 랜덤하게 배치 (던전 지날수록 몬스터 수 증가하기)
     if current_dungeon == 1:
@@ -176,6 +173,9 @@ def handle_events():
             elif event.key == SDLK_u:
                 inventory.set_player(player)  # 플레이어 전달
                 game_framework.push_mode(inventory)
+            elif event.key == SDLK_s:
+                # S 키: 포션 사용
+                player.use_potion()
             elif event.key == SDLK_RETURN:
                 # ENTER 키를 누르면 shop_mode로 전환
                 import shop_mode
@@ -204,7 +204,7 @@ def check_collision(x, y, player):
     return False
 
 def change_to_dungeon2():
-    global player, tiled_map, collision_boxes, monsters, loots, current_dungeon, all_monsters_cleared, exit_zone
+    global tiled_map, collision_boxes, monsters, loots, current_dungeon, all_monsters_cleared, exit_zone
 
     print("======> 던전2로 이동 ======>")
 
@@ -233,18 +233,18 @@ def change_to_dungeon2():
         print(" 경고: 던전2에 충돌 박스가 없습니다!")
 
     # 플레이어 위치 설정 (던전2 시작 위치)
-    player.x = 640
-    player.y = 50
+    server.player.x = 640
+    server.player.y = 50
 
     # UI 다시 생성
     global ui
     ui = UI()
-    ui.set_player(player)
+    ui.set_player(server.player)
     game_world.add_object(ui, 2)
 
     # 게임 월드에 다시 추가
     game_world.add_object(tiled_map, 0)
-    game_world.add_object(player, 1)
+    game_world.add_object(server.player, 1)
 
     # 던전2 몬스터 생성
     spawn_random_monsters(count=2)
@@ -309,16 +309,16 @@ def update(dt):
     global loots, all_monsters_cleared, camera_x, camera_y
 
     # 이전 위치 저장
-    prev_x = player.x
-    prev_y = player.y
+    prev_x = server.player.x
+    prev_y = server.player.y
 
     # 플레이어 업데이트
-    player.update(dt)
+    server.player.update(dt)
 
     # 몬스터 업데이트
     for monster in monsters[:]:  # 복사본으로 순회하여 안전하게 제거
         # 살아있거나 death 애니메이션 중이면 업데이트
-        monster.update(dt, frozen=False, player=player)
+        monster.update(dt, frozen=False, player=server.player)
 
         # death 애니메이션이 완전히 끝난 몬스터만 제거하고 전리품 생성
         if not monster.alive and monster.animator.is_animation_finished():
@@ -344,20 +344,20 @@ def update(dt):
     # 출구 영역 체크 (던전1에서 모든 몬스터 처치 후)
     if current_dungeon == 1 and all_monsters_cleared and exit_zone is not None:
         left, bottom, right, top = exit_zone
-        if left <= player.x <= right and bottom <= player.y <= top:
+        if left <= server.player.x <= right and bottom <= server.player.y <= top:
             change_to_dungeon2()
             return  # update 중단
 
     # 출구 영역 체크 (던전2에서 모든 몬스터 처치 후 보스방으로)
     if current_dungeon == 2 and all_monsters_cleared and exit_zone is not None:
         left, bottom, right, top = exit_zone
-        if left <= player.x <= right and bottom <= player.y <= top:
+        if left <= server.player.x <= right and bottom <= server.player.y <= top:
             change_to_boss_room()
             return  # update 중단
 
     # 플레이어 공격 충돌 처리
-    player_attack_bb = player.get_bb()
-    if player_attack_bb is not None and hasattr(player, 'attack_hit_pending') and player.attack_hit_pending:
+    player_attack_bb = server.player.get_bb()
+    if player_attack_bb is not None and hasattr(server.player, 'attack_hit_pending') and server.player.attack_hit_pending:
         left, bottom, right, top = player_attack_bb
         for monster in monsters[:]:  # 복사본으로 순회
             if not monster.alive:
@@ -373,11 +373,11 @@ def update(dt):
             # 사각형 충돌 감지
             if not (left > monster_right or right < monster_left or
                     bottom > monster_top or top < monster_bottom):
-                monster.take_damage(player.attack)
-                print(f"플레이어가 {monster.name}에게 {player.attack} 데미지!")
+                monster.take_damage(server.player.attack)
+                print(f"플레이어가 {monster.name}에게 {server.player.attack} 데미지!")
 
         # 한 번만 데미지 주기
-        player.attack_hit_pending = False
+        server.player.attack_hit_pending = False
 
     # 전리품 업데이트 및 수집 처리
     collected_loots = []
@@ -386,16 +386,16 @@ def update(dt):
         should_remove = loot.update(dt)
 
         # 플레이어가 수집 범위에 있는지 확인
-        if loot.check_collection(player.x, player.y):
+        if loot.check_collection(server.player.x, server.player.y):
             item_info = loot.get_item_info()
             # 플레이어의 loot_inventory에 직접 추가
             loot_type = item_info['type']
             quantity = item_info['quantity']
 
             # loot_type이 loot_inventory에 있으면 추가
-            if loot_type in player.loot_inventory:
-                player.loot_inventory[loot_type] += quantity
-                print(f"[COLLECT] 수집: {loot_type} x{quantity} (총: {player.loot_inventory[loot_type]})")
+            if loot_type in server.player.loot_inventory:
+                server.player.loot_inventory[loot_type] += quantity
+                print(f"[COLLECT] 수집: {loot_type} x{quantity} (총: {server.player.loot_inventory[loot_type]})")
             else:
                 print(f"[WARNING] 알 수 없는 전리품 타입: {loot_type}")
 
@@ -416,9 +416,9 @@ def update(dt):
         ui.update(dt)
 
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
-    if check_collision(player.x, player.y, player):
-        player.x = prev_x
-        player.y = prev_y
+    if check_collision(server.player.x, server.player.y, server.player):
+        server.player.x = prev_x
+        server.player.y = prev_y
 
     # 보스방에서 플레이어가 맵 경계를 넘지 않도록 제한
     if current_dungeon == 3:
@@ -426,7 +426,7 @@ def update(dt):
         map_height = tiled_map.map_height_px  # 1440
 
         # 플레이어 충돌 박스 크기 고려
-        if player.is_transformed:
+        if server.player.is_transformed:
             collision_w = TRANSFORM_COLLISION_W // 2
             collision_h = TRANSFORM_COLLISION_H // 2
         else:
@@ -434,16 +434,16 @@ def update(dt):
             collision_h = CHARACTER_COLLISION_H // 2
 
         # 플레이어가 맵 밖으로 나가지 않도록 제한 (맵 전체 범위)
-        if player.x < collision_w:
-            player.x = collision_w
-        elif player.x > map_width - collision_w:
-            player.x = map_width - collision_w
+        if server.player.x < collision_w:
+            server.player.x = collision_w
+        elif server.player.x > map_width - collision_w:
+            server.player.x = map_width - collision_w
 
         # Y축은 맵의 전체 높이
-        if player.y < collision_h:
-            player.y = collision_h
-        elif player.y > map_height - collision_h :
-            player.y = map_height - collision_h
+        if server.player.y < collision_h:
+            server.player.y = collision_h
+        elif server.player.y > map_height - collision_h :
+            server.player.y = map_height - collision_h
 
     # 카메라 업데이트: 보스방(던전3)에서만 작동
     if current_dungeon == 3:
@@ -454,8 +454,8 @@ def update(dt):
         half_screen_h = SCREEN_HEIGHT // 2  # 368
 
         # 카메라를 플레이어 중심으로 설정
-        camera_x = player.x
-        camera_y = player.y
+        camera_x = server.player.x
+        camera_y = server.player.y
 
         # 카메라 X 제한 (맵 너비 = 화면 너비이므로 중앙 고정)
         camera_x = map_width // 2  # 640으로 고정
