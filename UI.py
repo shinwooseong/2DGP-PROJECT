@@ -58,7 +58,7 @@ class UI:
                     return None
 
         self.coin_img = _load('UI/have_money.png')
-        self.potion_img = _load('Maid Run.png')
+        self.potion_img = _load('UI/hp_potion.png')
         self.backpack_img = _load('UI/back_base.png')
         self.transform_img = _load('UI/back_base.png')
 
@@ -252,10 +252,25 @@ class UI:
                     if self.tr_character_head:
                         self.tr_character_head.draw(transform_x, top_y, head_size, head_size)
 
-        # 포션 (변신 왼쪽, 추후 확장용)
-        # if self.potion_img:
-        #     potion_x = screen_w - right_margin - icon_size // 2 - spacing * 2
-        #     self.potion_img.draw(potion_x, top_y, icon_size, icon_size)
+        # 포션 (변신 왼쪽, S 키)
+        if self.backpack_img:  # 포션 이미지로 base UI 사용
+            potion_x = screen_w - right_margin - icon_size // 2 - spacing * 2
+            # 먼저 base 배경 그리기
+            self.backpack_img.draw(potion_x, top_y, icon_size, icon_size)
+
+            # base 위에 포션 이미지 표시
+            if self.potion_img:
+                self.potion_img.draw(potion_x, top_y, head_size, head_size)
+
+            # 키 표시와 개수 표시
+            if self.font:
+                self.font.draw(potion_x - 10, top_y - icon_size // 2 - 10, 'S', (255, 255, 255))
+
+            # 포션 개수 표시
+            if self.player is not None and self.font:
+                potion_count = getattr(self.player, 'hp_potion_count', 0)
+                # 아이콘 오른쪽 하단에 개수 표시 (노란색으로 변경)
+                self.font.draw(potion_x + icon_size // 4, top_y - icon_size // 4, f'{potion_count}', (255, 255, 0))
 
     def draw(self):
         SCREEN_W = main_chracter.SCREEN_W

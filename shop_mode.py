@@ -130,11 +130,11 @@ def handle_events():
             if not show_npc_dialogue:
                 server.player.handle_event(event)
 
-def check_collision(x, y, player):
+def check_collision(x, y):
     """플레이어의 위치가 충돌 박스와 충돌하는지 확인 (실제 캐릭터 크기 사용)"""
 
     # 변신 상태에 따라 다른 충돌 범위 사용
-    if player.is_transformed:
+    if server.player.is_transformed:
         collision_w = TRANSFORM_COLLISION_W // 2
         collision_h = TRANSFORM_COLLISION_H // 2
     else:
@@ -176,7 +176,7 @@ def update(dt):
         ui.update(dt)
 
     # 충돌 처리: 플레이어가 충돌 박스에 닿으면 이전 위치로 복원
-    if check_collision(server.player.x, server.player.y, server.player):
+    if check_collision(server.player.x, server.player.y):
         server.player.x = prev_x
         server.player.y = prev_y
 
@@ -196,12 +196,6 @@ def draw():
     for box in collision_boxes:
         left, bottom, right, top = box
         draw_rectangle(left, bottom, right, top)
-
-    # NPC와 상호작용 가능할 때 UI 표시
-    if active_npc is not None and active_npc.can_interact and not show_npc_dialogue:
-        if active_npc.interaction_ui_image:
-            # NPC 위에 상호작용 아이콘 표시
-            active_npc.interaction_ui_image.draw(active_npc.x, active_npc.y + 60, 40, 40)
 
     # NPC 대화 표시
     if show_npc_dialogue and active_npc is not None and dialogue_box_image and dialogue_font:
