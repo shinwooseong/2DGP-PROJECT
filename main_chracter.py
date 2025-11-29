@@ -282,6 +282,8 @@ class Main_character:
             self.health = getattr(self, 'health', 0) - damage
         print(f"Player took {damage} dmg. HP={self.health}")
         if self.health <= 0:
+            self.health = 0
+            self.is_dead = True  # 죽음 플래그 설정
             print("Player died")
 
     def use_potion(self):
