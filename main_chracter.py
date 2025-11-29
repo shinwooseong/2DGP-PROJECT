@@ -66,6 +66,9 @@ class Main_character:
         # 7. 변신 관련
         self.is_transformed = False  # 변신 상태 플래그
 
+        # 죽음 플래그
+        self.is_dead = False
+
         # 공격 범위 디버그 표시 플래그
         self.show_attack_bb = True
 

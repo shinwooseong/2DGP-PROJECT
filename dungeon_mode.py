@@ -308,6 +308,26 @@ def change_to_boss_room():
 def update(dt):
     global loots, all_monsters_cleared, camera_x, camera_y
 
+    # 게임 오버 체크 (플레이어가 죽었을 때)
+    if getattr(server.player, 'is_dead', False):
+
+        # 전리품을 1/3로 감소 (소수점 버림)
+        for loot_key in server.player.loot_inventory:
+            original_count = server.player.loot_inventory[loot_key]
+            new_count = original_count // 3
+            server.player.loot_inventory[loot_key] = new_count
+            print(f"[전리품 손실] {loot_key}: {original_count} -> {new_count}")
+
+        # 플레이어 상태 복구
+        server.player.health = server.player.max_health  # 체력 전체 회복
+        server.player.is_dead = False  # 죽음 플래그 해제
+
+        # 마을로 이동
+        import village_mode
+        village_mode.came_from_dungeon = True
+        game_framework.change_mode(village_mode)
+        return
+
     # 이전 위치 저장
     prev_x = server.player.x
     prev_y = server.player.y
