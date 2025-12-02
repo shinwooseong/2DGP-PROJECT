@@ -689,4 +689,21 @@ class Red_MS(Monster):
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=150, sight_range=450)
         self.state = self.animator.state
 
+
+class Agis_Boss(Monster):
+    """보스 몬스터 - 맵 중앙에 고정되어 움직이지 않음"""
+    def __init__(self, x=640, y=368):
+        super().__init__(name='Agis_Boss', x=x, y=y, hp=500, speed=0)
+        # Agis.png는 11프레임의 horizontal 애니메이션
+        # 일단 idle 상태만 사용
+        frames_map = {'idle': 17}
+        frame_time = {'idle': 0.1}
+        sheet_path = 'MS/boss/Agis.png'
+        self.animator = Animator('', frames_map, frame_time, layout='vertical', single_image_path=sheet_path)
+        self.combat = Combat(attack_power=30, attack_range=150, cooldown=2.0, attack_frames=frames_map.get('attack', 1), hit_frame=0)
+        # AI는 None으로 설정하거나, sight_range만 설정 (움직이지 않음)
+        self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=500)
+        self.state = self.animator.state
+        self.scale = 1.0  # 보스는 크게 표시
+
 # EOF

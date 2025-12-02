@@ -11,7 +11,7 @@ from main_chracter import Main_character
 from tiled_map import TiledMap
 from UI import UI
 import inventory
-from Monster import Green_MS, Red_MS, Trash_Monster
+from Monster import Green_MS, Red_MS, Trash_Monster, Agis_Boss
 from loot import Loot
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
@@ -125,8 +125,13 @@ def init():
     game_world.add_object(tiled_map, 0)
     game_world.add_object(server.player, 1)
 
-    # 보스 몬스터 생성 (임시로 일반 몬스터 1마리)
-    spawn_random_monsters(count=1)
+    # 보스 몬스터 생성 (맵 중앙에 Agis 보스 생성)
+    global monsters
+    monsters = []
+    boss = Agis_Boss(x=640, y=400)  # 맵 중앙에 배치
+    monsters.append(boss)
+    game_world.add_object(boss, 1)
+    print(f"보스 생성: {boss.name} at ({boss.x}, {boss.y})")
 
     # 보스방에서는 출구 없음
     exit_zone = None
