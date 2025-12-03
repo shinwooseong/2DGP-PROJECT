@@ -105,8 +105,10 @@ def init():
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
     pendant_image = load_image('UI/pendant_Icon.png')
 
-    # 보스룸은 던전2 맵 사용 (카메라 미사용)
-    tiled_map = TiledMap('map/dungeon2.json', use_camera=False)
+    # 보스룸은 boss_room.json 맵 사용 (카메라 사용)
+    tiled_map = TiledMap('map/boss_room.json', use_camera=True)
+    # 서버에 현재 tiled_map 참조 저장 (다른 객체들이 카메라 오프셋을 참조할 수 있게)
+    server.tiled_map = tiled_map
 
     # 충돌 영역 설정
     collision_boxes = tiled_map.get_collision_boxes()
@@ -125,13 +127,15 @@ def init():
     game_world.add_object(tiled_map, 0)
     game_world.add_object(server.player, 1)
 
-    # 보스 몬스터 생성 (맵 중앙에 Agis 보스 생성)
+    # 보스 몬스터 생성 (맵의 정확한 중앙에 배치)
     global monsters
     monsters = []
-    boss = QueenBee_Boss(x=640, y=400)  # 맵 중앙에 배치
+    map_center_x = tiled_map.map_width_px // 2
+    map_center_y = tiled_map.map_height_px // 2
+    boss = QueenBee_Boss(x=map_center_x, y=map_center_y)
     monsters.append(boss)
     game_world.add_object(boss, 1)
-    print(f"보스 생성: {boss.name} at ({boss.x}, {boss.y})")
+    print(f"보스 생성: {boss.name} at ({boss.x}, {boss.y}) - 맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px}")
 
     # 보스방에서는 출구 없음
     exit_zone = None
@@ -272,7 +276,6 @@ def change_to_dungeon2():
 def change_to_boss_room():
     global tiled_map, collision_boxes, monsters, loots, current_dungeon, all_monsters_cleared, exit_zone
 
-    print("======> 보스방으로 이동 ======>")
 
     # 현재 객체들 제거
     game_world.clear()
@@ -283,13 +286,11 @@ def change_to_boss_room():
     monsters = []
     loots = []
 
-    # 보스방은 던전2 맵 사용 (카메라 미사용)
-    tiled_map = TiledMap('map/dungeon2.json', use_camera=False)
+    tiled_map = TiledMap('map/boss_room.json', use_camera=True)
+    server.tiled_map = tiled_map
 
     # 충돌 박스 업데이트
     collision_boxes = tiled_map.get_collision_boxes()
-
-    print(f"보스방 충돌 박스 로드 완료: {len(collision_boxes)}개")
 
     # 플레이어 위치 설정
     server.player.x = 640
@@ -305,13 +306,15 @@ def change_to_boss_room():
     game_world.add_object(tiled_map, 0)
     game_world.add_object(server.player, 1)
 
-    # 보스 몬스터 생성
-    spawn_random_monsters(count=1)
+    # 보스 몬스터 생성 (맵의 정확한 중앙에 배치)
+    map_center_x = tiled_map.map_width_px // 2
+    map_center_y = tiled_map.map_height_px // 2
+    boss = QueenBee_Boss(x=map_center_x, y=map_center_y)
+    monsters.append(boss)
+    game_world.add_object(boss, 1)
 
     # 보스방에서는 출구 없음
     exit_zone = None
-
-    print(f"보스방 로드 완료 (던전2 맵 사용)")
 
 def update(dt):
     global loots, all_monsters_cleared
@@ -349,6 +352,27 @@ def update(dt):
 
     # 플레이어 업데이트
     server.player.update(dt)
+
+    # 보스방(던전3)에서 맵 경계 제한 (양끝에서 15픽셀 안쪽으로 제한)
+    if current_dungeon == 3 and tiled_map is not None:
+        margin = 50
+        map_width = tiled_map.map_width_px
+        map_height = tiled_map.map_height_px
+
+        # 플레이어가 경계를 벗어나지 못하도록 제한
+        if server.player.x < margin:
+            server.player.x = margin
+        elif server.player.x > map_width - margin:
+            server.player.x = map_width - margin
+
+        if server.player.y < margin:
+            server.player.y = margin
+        elif server.player.y > map_height - margin:
+            server.player.y = map_height - margin
+
+    # 카메라 업데이트
+    if server.tiled_map and getattr(server.tiled_map, 'use_camera', False):
+        server.tiled_map.update_camera(server.player.x, server.player.y)
 
     # 몬스터 업데이트
     for monster in monsters[:]:
@@ -447,13 +471,22 @@ def update(dt):
 def draw():
     clear_canvas()
 
+    # 카메라 오프셋 계산(있으면 적용)
+    cam = getattr(server, 'tiled_map', None)
+    use_cam = bool(cam and getattr(cam, 'use_camera', False))
+    cam_ox = cam.cam_offset_x if use_cam else 0
+    cam_oy = cam.cam_offset_y if use_cam else 0
+
     # 모든 던전에서 동일한 렌더링
     game_world.render()
 
     # 충돌 박스 표시
     for box in collision_boxes:
         left, bottom, right, top = box
-        draw_rectangle(left, bottom, right, top)
+        if use_cam:
+            draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
+        else:
+            draw_rectangle(left, bottom, right, top)
 
     # 몬스터 공격 범위 표시
     for monster in monsters:
@@ -461,7 +494,10 @@ def draw():
             attack_bb = monster.get_attack_bb()
             if attack_bb is not None:
                 left, bottom, right, top = attack_bb
-                draw_rectangle(left, bottom, right, top)
+                if use_cam:
+                    draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
+                else:
+                    draw_rectangle(left, bottom, right, top)
 
     # 던전1 메시지
     if current_dungeon == 1 and all_monsters_cleared and message_font is not None:
