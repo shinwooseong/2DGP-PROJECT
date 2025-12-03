@@ -11,7 +11,7 @@ from main_chracter import Main_character
 from tiled_map import TiledMap
 from UI import UI
 import inventory
-from Monster import Green_MS, Red_MS, Trash_Monster, Agis_Boss
+from Monster import Green_MS, Red_MS, Trash_Monster, QueenBee_Boss
 from loot import Loot
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
@@ -128,7 +128,7 @@ def init():
     # 보스 몬스터 생성 (맵 중앙에 Agis 보스 생성)
     global monsters
     monsters = []
-    boss = Agis_Boss(x=640, y=400)  # 맵 중앙에 배치
+    boss = QueenBee_Boss(x=640, y=400)  # 맵 중앙에 배치
     monsters.append(boss)
     game_world.add_object(boss, 1)
     print(f"보스 생성: {boss.name} at ({boss.x}, {boss.y})")
