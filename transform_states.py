@@ -1,6 +1,7 @@
 import time
 from pico2d import load_image
 from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H, TRANSFORM_FOOT_OFFSET_Y
+import server
 
 # 실제 충돌 범위 import (순환 import 방지를 위해 character_constants에서 가져옴)
 from character_constants import (
@@ -38,6 +39,12 @@ class TransformIdle:
             self.character.state_machine.handle_state_event(('MOVE', None))
 
     def draw(self):
+        # 카메라 오프셋 계산
+        cam = getattr(server, 'tiled_map', None)
+        use_cam = bool(cam and getattr(cam, 'use_camera', False))
+        cam_ox = cam.cam_offset_x if use_cam else 0
+        cam_oy = cam.cam_offset_y if use_cam else 0
+
         loader = self.character.transform_loader
         image = loader.idle_image
         frames = loader.idle_frames
@@ -48,18 +55,21 @@ class TransformIdle:
         img_height = image.h
 
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_y_world = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_x_world = self.character.x
+        draw_x = draw_x_world + cam_ox
+        draw_y = draw_y_world + cam_oy
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':
             image.clip_composite_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                0, 'h', self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                0, 'h', draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
         else:  # RIGHT
             image.clip_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
 
 
@@ -109,6 +119,12 @@ class TransformWalk:
         self.character.y += dy
 
     def draw(self):
+        # 카메라 오프셋 계산
+        cam = getattr(server, 'tiled_map', None)
+        use_cam = bool(cam and getattr(cam, 'use_camera', False))
+        cam_ox = cam.cam_offset_x if use_cam else 0
+        cam_oy = cam.cam_offset_y if use_cam else 0
+
         loader = self.character.transform_loader
         image = loader.run_image
         frames = loader.run_frames
@@ -119,18 +135,21 @@ class TransformWalk:
         img_height = image.h
 
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_y_world = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_x_world = self.character.x
+        draw_x = draw_x_world + cam_ox
+        draw_y = draw_y_world + cam_oy
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':
             image.clip_composite_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                0, 'h', self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                0, 'h', draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
         else:  # RIGHT
             image.clip_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
 
 
@@ -184,6 +203,12 @@ class TransformRoll:
             self.character.roll_moved = getattr(self.character, 'roll_moved', 0.0) + move
 
     def draw(self):
+        # 카메라 오프셋 계산
+        cam = getattr(server, 'tiled_map', None)
+        use_cam = bool(cam and getattr(cam, 'use_camera', False))
+        cam_ox = cam.cam_offset_x if use_cam else 0
+        cam_oy = cam.cam_offset_y if use_cam else 0
+
         loader = self.character.transform_loader
         image = loader.dash_image
         frames = loader.dash_frames
@@ -194,18 +219,21 @@ class TransformRoll:
         img_height = image.h
 
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_y_world = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_x_world = self.character.x
+        draw_x = draw_x_world + cam_ox
+        draw_y = draw_y_world + cam_oy
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':
             image.clip_composite_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                0, 'h', self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                0, 'h', draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
         else:  # RIGHT
             image.clip_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
 
 
@@ -301,6 +329,12 @@ class TransformAttack:
                     return
 
     def draw(self):
+        # 카메라 오프셋 계산
+        cam = getattr(server, 'tiled_map', None)
+        use_cam = bool(cam and getattr(cam, 'use_camera', False))
+        cam_ox = cam.cam_offset_x if use_cam else 0
+        cam_oy = cam.cam_offset_y if use_cam else 0
+
         loader = self.character.transform_loader
 
         if self.stage == 1:
@@ -316,16 +350,19 @@ class TransformAttack:
         img_height = img.h
 
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
-        draw_y = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_y_world = self.character.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+        draw_x_world = self.character.x
+        draw_x = draw_x_world + cam_ox
+        draw_y = draw_y_world + cam_oy
 
         # 왼쪽 방향이면 이미지 좌우 반전
         if self.character.dir == 'LEFT':
             img.clip_composite_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                0, 'h', self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                0, 'h', draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
         else:  # RIGHT
             img.clip_draw(
                 x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                self.character.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
             )
