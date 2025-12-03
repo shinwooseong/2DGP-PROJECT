@@ -1,7 +1,7 @@
 # tiled_map.py
 import json
 import os
-from pico2d import load_image, get_canvas_width, get_canvas_height
+from pico2d import load_image, get_canvas_width, get_canvas_height, clamp
 
 
 class TiledMap:
@@ -25,6 +25,12 @@ class TiledMap:
 
         # 카메라 사용 여부 저장
         self.use_camera = use_camera
+
+        # 카메라 관련 초기값
+        self.camera_x = 0
+        self.camera_y = 0
+        self.cam_offset_x = 0
+        self.cam_offset_y = 0
 
         if use_camera:
             # 카메라 사용 시에는 스케일을 1.0으로 고정 (원본 크기)
@@ -84,6 +90,38 @@ class TiledMap:
 
     def draw(self):
         """기본 draw 메서드 (카메라 미사용 시 - 화면에 맞게 스케일링)"""
+        if self.use_camera:
+            # 플레이어 위치 가져오기 (지연 임포트로 순환 참조 방지)
+            import server
+            if server.player:
+                # 1. 카메라의 중심 좌표 목표 (플레이어 위치)
+                target_cam_x = server.player.x
+                target_cam_y = server.player.y
+
+                # 맵이 화면보다 작을 경우에 대한 예외 처리
+                if self.map_width_px < self.screen_w:
+                    cam_x = self.map_width_px // 2
+                else:
+                    cam_x = clamp(self.screen_w // 2, target_cam_x, self.map_width_px - self.screen_w // 2)
+
+                if self.map_height_px < self.screen_h:
+                    cam_y = self.map_height_px // 2
+                else:
+                    cam_y = clamp(self.screen_h // 2, target_cam_y, self.map_height_px - self.screen_h // 2)
+
+                # 3. 계산된 카메라 위치로 그리기
+                # 저장해둔 카메라 위치/오프셋은 다른 객체들이 참조할 수 있게 보관
+                self.camera_x = cam_x
+                self.camera_y = cam_y
+                self.cam_offset_x = self.screen_w // 2 - cam_x
+                self.cam_offset_y = self.screen_h // 2 - cam_y
+                self.draw_with_camera(cam_x, cam_y)
+        else:
+            # 기존의 고정된 화면 그리기 (전체 맵 축소)
+            self._draw_static()
+
+    def _draw_static(self):
+        # 기존 draw() 로직을 이쪽으로 이동 (이름만 변경)
         for layer_data in self.layers_data:
             for y in range(self.map_height_tiles):
                 for x in range(self.map_width_tiles):
@@ -104,14 +142,26 @@ class TiledMap:
                     )
 
     def draw_with_camera(self, camera_x, camera_y):
-        """카메라 기준으로 렌더링"""
-        # 카메라 오프셋 계산 (플레이어를 화면 중앙에 배치)
+        # 화면 중앙을 기준으로 카메라 오프셋 계산
         cam_offset_x = self.screen_w // 2 - camera_x
         cam_offset_y = self.screen_h // 2 - camera_y
 
+        # 화면에 보일 타일 범위만 계산 (최적화 - Culling)
+        # 화면 왼쪽 끝의 월드 좌표 = camera_x - screen_w // 2
+        view_left = camera_x - self.screen_w // 2
+        view_right = camera_x + self.screen_w // 2
+        view_bottom = camera_y - self.screen_h // 2
+        view_top = camera_y + self.screen_h // 2
+
+        # 인덱스로 변환 (여유분 1타일 추가)
+        start_x = max(0, int(view_left // self.tile_width))
+        end_x = min(self.map_width_tiles, int(view_right // self.tile_width) + 1)
+        start_y = max(0, int(view_bottom // self.tile_height))
+        end_y = min(self.map_height_tiles, int(view_top // self.tile_height) + 1)
+
         for layer_data in self.layers_data:
-            for y in range(self.map_height_tiles):
-                for x in range(self.map_width_tiles):
+            for y in range(start_y, end_y):
+                for x in range(start_x, end_x):
                     map_index = (self.map_height_tiles - 1 - y) * self.map_width_tiles + x
                     tile_id = layer_data[map_index]
                     if tile_id == 0: continue
@@ -120,17 +170,11 @@ class TiledMap:
                     src_y = ((tile_id - 1) // self.tileset_cols) * self.tile_height
                     src_y = self.tileset_image.h - src_y - self.tile_height
 
-                    # 월드 좌표를 화면 좌표로 변환 (카메라 적용)
                     world_x = x * self.tile_width + self.tile_width // 2
                     world_y = y * self.tile_height + self.tile_height // 2
 
                     screen_x = world_x + cam_offset_x
                     screen_y = world_y + cam_offset_y
-
-                    # 화면 밖의 타일은 그리지 않음 (최적화)
-                    if (screen_x + self.tile_width // 2 < 0 or screen_x - self.tile_width // 2 > self.screen_w or
-                        screen_y + self.tile_height // 2 < 0 or screen_y - self.tile_height // 2 > self.screen_h):
-                        continue
 
                     self.tileset_image.clip_draw(
                         src_x, src_y, self.tile_width, self.tile_height,
@@ -178,3 +222,24 @@ class TiledMap:
 
     def update(self, dt):
         pass
+
+    def update_camera(self, player_x, player_y):
+        if not self.use_camera:
+            return
+        target_cam_x = player_x
+        target_cam_y = player_y
+
+        if self.map_width_px < self.screen_w:
+            cam_x = self.map_width_px // 2
+        else:
+            cam_x = clamp(self.screen_w // 2, target_cam_x, self.map_width_px - self.screen_w // 2)
+
+        if self.map_height_px < self.screen_h:
+            cam_y = self.map_height_px // 2
+        else:
+            cam_y = clamp(self.screen_h // 2, target_cam_y, self.map_height_px - self.screen_h // 2)
+
+        self.camera_x = cam_x
+        self.camera_y = cam_y
+        self.cam_offset_x = self.screen_w // 2 - cam_x
+        self.cam_offset_y = self.screen_h // 2 - cam_y

@@ -612,7 +612,18 @@ class Monster:
             return
 
         # alive이거나, death 애니메이션 진행 중이면 계속 그리기
-        self.animator.draw(self.x, self.y, getattr(self, 'scale', 1.0))
+        # 카메라 보정: 보스룸 등에서 tiled_map.use_camera일 때 월드->스크린으로 변환
+        try:
+            import server
+            cam = getattr(server, 'tiled_map', None)
+            use_cam = bool(cam and getattr(cam, 'use_camera', False))
+            cam_ox = cam.cam_offset_x if use_cam else 0
+            cam_oy = cam.cam_offset_y if use_cam else 0
+        except Exception:
+            cam_ox = 0
+            cam_oy = 0
+
+        self.animator.draw(self.x + cam_ox, self.y + cam_oy, getattr(self, 'scale', 1.0))
 
     def take_damage(self, dmg):
         if not self.alive:
@@ -775,6 +786,6 @@ class QueenBee_Boss(Monster):
         self.combat = Combat(attack_power=30, attack_range=150, cooldown=2.0, attack_frames=1, hit_frame=0)
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=500)
         self.state = self.animator.state
-        self.scale = 1.0
+        self.scale = 2.0
 
 # EOF

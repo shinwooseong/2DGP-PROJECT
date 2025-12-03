@@ -1,6 +1,13 @@
 import time
 from pico2d import load_image
 from player_loader import FOOT_OFFSET_Y
+import server
+
+
+def _cam_offsets():
+    cam = getattr(server, 'tiled_map', None)
+    use_cam = bool(cam and getattr(cam, 'use_camera', False))
+    return (cam.cam_offset_x if use_cam else 0, cam.cam_offset_y if use_cam else 0)
 
 # 실제 충돌 범위 import (순환 import 방지를 위해 character_constants에서 가져옴)
 from character_constants import (
@@ -47,11 +54,12 @@ class Idle:
         y_offset = loader.idle_y_offsets[self.character.dir]
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
         draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
+        ox, oy = _cam_offsets()
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
-            self.character.x,
-            draw_y,
+            self.character.x + ox,
+            draw_y + oy,
         )
 
 
@@ -106,11 +114,12 @@ class Walk:
         y_offset = loader.run_y_offsets[self.character.dir]
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
         draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
+        ox, oy = _cam_offsets()
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
-            self.character.x,
-            draw_y,
+            self.character.x + ox,
+            draw_y + oy,
         )
 
 
@@ -176,11 +185,12 @@ class Roll:
         y_offset = loader.run_y_offsets[self.character.dir]
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
         draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
+        ox, oy = _cam_offsets()
         image.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
-            self.character.x,
-            draw_y,
+            self.character.x + ox,
+            draw_y + oy,
         )
 
 
@@ -274,8 +284,9 @@ class Attack:
         y_offset = loader.attack_y_offsets[self.stage][self.character.dir]
         # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
         draw_y = self.character.y + (SPRITE_H // 2) - FOOT_OFFSET_Y
+        ox, oy = _cam_offsets()
         img.clip_draw(
             x_offset, y_offset,
             SPRITE_W, SPRITE_H,
-            self.character.x, draw_y
+            self.character.x + ox, draw_y + oy
         )
