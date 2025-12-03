@@ -95,8 +95,8 @@ def init():
     global tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone, pendant_image, dialogue_font, show_return_prompt
 
 
-    # 보스룸 테스트를 위해 던전 3부터 시작
-    current_dungeon = 3  # 보스룸
+    # 던전1부터 시작
+    current_dungeon = 1
     all_monsters_cleared = False
     show_return_prompt = False
 
@@ -105,9 +105,9 @@ def init():
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
     pendant_image = load_image('UI/pendant_Icon.png')
 
-    # 보스룸은 boss_room.json 맵 사용 (카메라 사용)
-    tiled_map = TiledMap('map/boss_room.json', use_camera=True)
-    # 서버에 현재 tiled_map 참조 저장 (다른 객체들이 카메라 오프셋을 참조할 수 있게)
+    # 던전1 맵 사용 (카메라 미사용)
+    tiled_map = TiledMap('map/dungeon1.json', use_camera=False)
+    # 서버에 현재 tiled_map 참조 저장
     server.tiled_map = tiled_map
 
     # 충돌 영역 설정
@@ -115,7 +115,7 @@ def init():
 
     # 플레이어 시작 위치
     server.player.x = 640
-    server.player.y = 200
+    server.player.y = 50
 
     # UI 생성 및 등록
     ui = UI()
@@ -127,21 +127,16 @@ def init():
     game_world.add_object(tiled_map, 0)
     game_world.add_object(server.player, 1)
 
-    # 보스 몬스터 생성 (맵의 정확한 중앙에 배치)
+    # 던전1 일반 몬스터 생성
     global monsters
     monsters = []
-    map_center_x = tiled_map.map_width_px // 2
-    map_center_y = tiled_map.map_height_px // 2
-    boss = QueenBee_Boss(x=map_center_x, y=map_center_y)
-    monsters.append(boss)
-    game_world.add_object(boss, 1)
-    print(f"보스 생성: {boss.name} at ({boss.x}, {boss.y}) - 맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px}")
+    spawn_random_monsters(count=1)
 
-    # 보스방에서는 출구 없음
-    exit_zone = None
+    # 던전1 출구 설정 (상단 문 위치)
+    exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
 
     # 디버그 정보
-    print(f"======> 보스룸 테스트 모드 시작 (던전2 맵 사용) ======>")
+    print(f"======> 던전1 시작 ======>")
     print(f"로드된 충돌 상자 개수: {len(collision_boxes)}")
     print(f"맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px} 픽셀")
 
@@ -259,6 +254,7 @@ def change_to_dungeon2():
     global ui
     ui = UI()
     ui.set_player(server.player)
+    ui.is_in_dungeon = True  # 던전 모드 플래그 설정
     game_world.add_object(ui, 2)
 
     # 게임 월드에 다시 추가
@@ -300,6 +296,7 @@ def change_to_boss_room():
     global ui
     ui = UI()
     ui.set_player(server.player)
+    ui.is_in_dungeon = True  # 던전 모드 플래그 설정
     game_world.add_object(ui, 2)
 
     # 게임 월드에 다시 추가
