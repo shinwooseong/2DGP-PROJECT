@@ -1,5 +1,6 @@
 import time
 from pico2d import load_image, draw_rectangle
+import server
 from sdl2 import SDLK_a, SDL_KEYDOWN, SDL_KEYUP, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT, SDLK_SPACE, SDLK_x
 
 from state_machine import StateMachine
@@ -207,6 +208,12 @@ class Main_character:
             pass
 
     def draw(self):
+        # 카메라 오프셋 계산
+        cam = getattr(server, 'tiled_map', None)
+        use_cam = bool(cam and getattr(cam, 'use_camera', False))
+        cam_ox = cam.cam_offset_x if use_cam else 0
+        cam_oy = cam.cam_offset_y if use_cam else 0
+
         # 변신 Hurt 애니메이션 재생 중이면 Hurt 그리기
         if getattr(self, 'transform_hurt_animation_playing', False):
             loader = self.transform_loader
@@ -219,29 +226,32 @@ class Main_character:
             img_height = image.h
 
             # 발(실제 발 위치)을 원점으로 하기 위해 y 좌표 조정
-            draw_y = self.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+            draw_y_world = self.y + (TRANSFORM_SPRITE_H // 2) - TRANSFORM_FOOT_OFFSET_Y
+            draw_x_world = self.x
+            draw_x = draw_x_world + cam_ox
+            draw_y = draw_y_world + cam_oy
 
             # 왼쪽 방향이면 이미지 좌우 반전
             if self.dir == 'LEFT':
                 image.clip_composite_draw(
                     x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                    0, 'h', self.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                    0, 'h', draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
                 )
             else:  # RIGHT
                 image.clip_draw(
                     x_offset, 0, TRANSFORM_SPRITE_W, img_height,
-                    self.x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
+                    draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
                 )
 
             # 디버그: 실제 충돌 범위 표시 (변신 캐릭터)
             draw_rectangle(
-                self.x - TRANSFORM_COLLISION_W // 2,
-                self.y - TRANSFORM_COLLISION_H // 2,
-                self.x + TRANSFORM_COLLISION_W // 2,
-                self.y + TRANSFORM_COLLISION_H // 2
+                self.x - TRANSFORM_COLLISION_W // 2 + cam_ox,
+                self.y - TRANSFORM_COLLISION_H // 2 + cam_oy,
+                self.x + TRANSFORM_COLLISION_W // 2 + cam_ox,
+                self.y + TRANSFORM_COLLISION_H // 2 + cam_oy
             )
             # 발 위치 표시 (노란색 작은 점)
-            draw_rectangle(self.x - 2, self.y - 2, self.x + 2, self.y + 2)
+            draw_rectangle(self.x - 2 + cam_ox, self.y - 2 + cam_oy, self.x + 2 + cam_ox, self.y + 2 + cam_oy)
             return
 
         try:
@@ -253,28 +263,31 @@ class Main_character:
                 if bb is not None:
                     left, bottom, right, top = bb
                     # 빨간색으로 공격 범위 표시
-                    draw_rectangle(left, bottom, right, top)
+                    if use_cam:
+                        draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
+                    else:
+                        draw_rectangle(left, bottom, right, top)
 
             # 디버그: 실제 충돌 범위 표시 (캐릭터 크기에 맞게)
             if self.is_transformed:
                 # 변신 상태일 때는 변신 캐릭터 충돌 범위
                 draw_rectangle(
-                    self.x - TRANSFORM_COLLISION_W // 2,
-                    self.y - TRANSFORM_COLLISION_H // 2,
-                    self.x + TRANSFORM_COLLISION_W // 2,
-                    self.y + TRANSFORM_COLLISION_H // 2
+                    self.x - TRANSFORM_COLLISION_W // 2 + cam_ox,
+                    self.y - TRANSFORM_COLLISION_H // 2 + cam_oy,
+                    self.x + TRANSFORM_COLLISION_W // 2 + cam_ox,
+                    self.y + TRANSFORM_COLLISION_H // 2 + cam_oy
                 )
             else:
                 # 기본 상태일 때는 기본 캐릭터 충돌 범위
                 draw_rectangle(
-                    self.x - CHARACTER_COLLISION_W // 2,
-                    self.y - CHARACTER_COLLISION_H // 2,
-                    self.x + CHARACTER_COLLISION_W // 2,
-                    self.y + CHARACTER_COLLISION_H // 2
+                    self.x - CHARACTER_COLLISION_W // 2 + cam_ox,
+                    self.y - CHARACTER_COLLISION_H // 2 + cam_oy,
+                    self.x + CHARACTER_COLLISION_W // 2 + cam_ox,
+                    self.y + CHARACTER_COLLISION_H // 2 + cam_oy
                 )
 
             # 발 위치 표시 (노란색 작은 점)
-            draw_rectangle(self.x - 2, self.y - 2, self.x + 2, self.y + 2)
+            draw_rectangle(self.x - 2 + cam_ox, self.y - 2 + cam_oy, self.x + 2 + cam_ox, self.y + 2 + cam_oy)
         except Exception:
             pass
 
