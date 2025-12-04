@@ -390,6 +390,10 @@ def update(dt):
     for monster in monsters[:]:
         # monster.update(dt, frozen=False, player=server.player)  # 이미 game_world.update에서 호출됨
 
+        # 보스의 꿀 수집 확인 (QueenBee_Boss인 경우)
+        if hasattr(monster, 'check_honey_collected'):
+            monster.check_honey_collected()
+
         # death 애니메이션이 완전히 끝난 몬스터만 제거하고 전리품 생성
         if not monster.alive and monster.animator.is_animation_finished():
             loot = Loot(monster.x, monster.y, item_type=None, quantity=random.randint(1, 3))
