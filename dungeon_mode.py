@@ -11,7 +11,8 @@ from main_chracter import Main_character
 from tiled_map import TiledMap
 from UI import UI
 import inventory
-from Monster import Green_MS, Red_MS, Trash_Monster, QueenBee_Boss
+from Monster import Green_MS, Red_MS, Trash_Monster
+from boss_queen_bee import QueenBee_Boss
 from loot import Loot
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
