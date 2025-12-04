@@ -25,7 +25,7 @@ ui = None
 collision_boxes = []  # 충돌 영역
 monsters = []  # 몬스터 리스트
 loots = []  # 떨어진 전리품 리스트
-current_dungeon = 1  # 현재 던전 레벨
+current_dungeon = 3  # 현재 던전 레벨
 all_monsters_cleared = False  # 모든 몬스터 처치 여부
 message_font = None  # 메시지 출력용 폰트
 exit_zone = None  # 출구 영역 (문 위치에 따라 설정할 것임)
@@ -97,7 +97,7 @@ def init():
 
 
     # 던전1부터 시작
-    current_dungeon = 1
+    current_dungeon = 3
     all_monsters_cleared = False
     show_return_prompt = False
 
@@ -107,7 +107,8 @@ def init():
     pendant_image = load_image('UI/pendant_Icon.png')
 
     # 던전1 맵 사용 (카메라 미사용)
-    tiled_map = TiledMap('map/dungeon1.json', use_camera=False)
+    #tiled_map = TiledMap('map/dungeon1.json', use_camera=False)
+    tiled_map = TiledMap('map/boss_room.json', use_camera=True)
     # 서버에 현재 tiled_map 참조 저장
     server.tiled_map = tiled_map
 
@@ -124,14 +125,24 @@ def init():
     ui.is_in_dungeon = True
     game_world.add_object(ui, 2)
 
+
+
     # 게임 월드에 객체 추가
     game_world.add_object(tiled_map, 0)
     game_world.add_object(server.player, 1)
 
-    # 던전1 일반 몬스터 생성
     global monsters
     monsters = []
-    spawn_random_monsters(count=1)
+    map_center_x = tiled_map.map_width_px // 2
+    map_center_y = tiled_map.map_height_px // 2
+    boss = QueenBee_Boss(x=map_center_x, y=map_center_y)
+    monsters.append(boss)
+    game_world.add_object(boss, 1)
+
+    # 던전1 일반 몬스터 생성
+    #global monsters
+    #monsters = []
+    #spawn_random_monsters(count=1)
 
     # 던전1 출구 설정 (상단 문 위치)
     exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
@@ -372,9 +383,12 @@ def update(dt):
     if server.tiled_map and getattr(server.tiled_map, 'use_camera', False):
         server.tiled_map.update_camera(server.player.x, server.player.y)
 
+    # game_world의 모든 객체 업데이트 (BeeSting 포함)
+    game_world.update(dt)
+
     # 몬스터 업데이트
     for monster in monsters[:]:
-        monster.update(dt, frozen=False, player=server.player)
+        # monster.update(dt, frozen=False, player=server.player)  # 이미 game_world.update에서 호출됨
 
         # death 애니메이션이 완전히 끝난 몬스터만 제거하고 전리품 생성
         if not monster.alive and monster.animator.is_animation_finished():
@@ -434,7 +448,8 @@ def update(dt):
     # 전리품 업데이트 및 수집 처리
     collected_loots = []
     for loot in loots:
-        should_remove = loot.update(dt)
+        # should_remove = loot.update(dt)  # 이미 game_world.update에서 호출됨
+        should_remove = False
 
         if loot.check_collection(server.player.x, server.player.y):
             item_info = loot.get_item_info()
