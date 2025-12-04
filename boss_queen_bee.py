@@ -1,5 +1,9 @@
 from Monster import Monster, Animator, Combat, SimpleAI
-
+import random
+import game_framework
+import game_world
+from boss_bees import BeeSting
+import server
 
 class QueenBee_Boss(Monster):
     def __init__(self, x=640, y=368):
@@ -49,4 +53,42 @@ class QueenBee_Boss(Monster):
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=500)
         self.state = self.animator.state
         self.scale = 2.0
+
+        # 공격 패턴 관련 변수
+        self.attack_cooldown = 0
+        self.attack_interval = 2.0  # 2초마다 공격
+        self.projectiles = []
+
+    def update(self, dt=0.01, frozen=False, player=None):
+        # 기본 애니메이션 업데이트 (부모 클래스 호출)
+        super().update(dt, frozen, player)
+
+        if frozen or not self.alive:
+            return
+
+        # 공격 쿨타임 업데이트
+        self.attack_cooldown -= dt
+
+        # 공격 쿨타임이 끝나면 벌침 발사
+        if self.attack_cooldown <= 0:
+            self.attack_bees()
+            self.attack_cooldown = self.attack_interval
+
+    def attack_bees(self):
+
+        # 맵 높이 기준으로 랜덤 y 좌표 생성
+        map_h = getattr(getattr(server, 'tiled_map', None), 'map_height_px', 736)
+        map_w = getattr(getattr(server, 'tiled_map', None), 'map_width_px', 1280)
+
+        # 화면 중앙 ~ 상단 영역에서 발사
+        min_y = map_h // 3
+        max_y = map_h - 10
+
+        # 왼쪽에서 오른쪽으로
+        left_sting = BeeSting(x=-50, y=random.randint(min_y, max_y), direction=1, speed=550)
+        game_world.add_object(left_sting, 1)
+
+        # 오른쪽에서 왼쪽으로
+        right_sting = BeeSting(x=map_w + 50, y=random.randint(min_y, max_y), direction=-1, speed=350)
+        game_world.add_object(right_sting, 1)
 
