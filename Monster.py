@@ -31,6 +31,7 @@ class Animator:
         self._grid_info = {}
         self._image_list = None
         self._image_list_loaded = []
+        self._animation_done = False  # 일반 애니메이션 완료 플래그 추가
 
         # Handle image_list mode (개별 이미지 파일들)
         if image_list:
@@ -285,10 +286,15 @@ class Animator:
         self.acc = 0.0
         if state == 'death':
             self._death_done = False
+        self._animation_done = False  # 상태 변경 시 리셋
 
     def update(self, dt):
         if self.state == 'death' and self._death_done:
             return
+        # 일반 애니메이션이 완료되면 업데이트 중단
+        if self._animation_done:
+            return
+
         frames = int(self.frames_map.get(self.state, 1))
         ft = float(self.frame_time_map.get(self.state, 0.1))
         self.acc += dt
@@ -312,12 +318,22 @@ class Animator:
                     self.frame = 0
                     self.state = 'idle'
                     break
+            elif self.state == 'spray':
+                # spray 애니메이션은 한 번만 재생
+                if self.frame >= frames:
+                    self.frame = frames - 1
+                    self._animation_done = True
+                    break
             else:
                 self.frame %= frames
 
     # 'death' 애니메이션 끝나야지만, 죽음 처리되게
     def is_animation_finished(self):
-        return self.state == 'death' and self._death_done
+        if self.state == 'death':
+            return self._death_done
+        elif self.state == 'spray':
+            return self._animation_done
+        return False
 
     def draw(self, x, y, scale=1.0):
         # Handle image_list mode first
