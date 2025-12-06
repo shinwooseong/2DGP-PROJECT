@@ -269,8 +269,8 @@ class QueenBee_Boss(Monster):
 
         # 꿀 개수: enraged2 모드이면 10개, 아니면 5개
         honey_count = 10 if getattr(self, 'enraged2', False) else 5
-        margin = 150
-        boss_exclusion_radius = 250
+        margin = 250    # 맵 가장자리에서 떨어진 거리
+        boss_exclusion_radius = 250 # 보스 위치에서 이 거리 이내에는 꿀 생성 금지
 
         attempts = 0
         max_attempts = 100

@@ -119,7 +119,7 @@ def init():
     collision_boxes = tiled_map.get_collision_boxes()
 
     # 플레이어 시작 위치
-    server.player.x = 640
+    server.player.x = 950
     server.player.y = 50
 
     # UI 생성 및 등록

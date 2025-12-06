@@ -80,11 +80,15 @@ class BeeSting:
             pw = getattr(player, 'width', 40)
             ph = getattr(player, 'height', 64)
 
+            # 충돌 범위 축소 (그림 범위보다 살짝 작게)
+            shrink_x = 15
+            shrink_y = 15
+
             # AABB 충돌 검사
-            left1 = self.x - self.width // 2
-            bottom1 = self.y - self.height // 2
-            right1 = self.x + self.width // 2
-            top1 = self.y + self.height // 2
+            left1 = self.x - self.width // 2 + shrink_x
+            bottom1 = self.y - self.height // 2 + shrink_y
+            right1 = self.x + self.width // 2 - shrink_x
+            top1 = self.y + self.height // 2 - shrink_y
 
             left2 = player.x - pw // 2
             bottom2 = player.y - ph // 2
@@ -200,10 +204,14 @@ class BossBullet:
             pw = getattr(player, 'width', 40)
             ph = getattr(player, 'height', 64)
 
-            left1 = self.x - self.width // 2
-            bottom1 = self.y - self.height // 2
-            right1 = self.x + self.width // 2
-            top1 = self.y + self.height // 2
+            # 충돌 범위 축소
+            shrink_x = 12
+            shrink_y = 12
+
+            left1 = self.x - self.width // 2 + shrink_x
+            bottom1 = self.y - self.height // 2 + shrink_y
+            right1 = self.x + self.width // 2 - shrink_x
+            top1 = self.y + self.height // 2 - shrink_y
 
             left2 = player.x - pw // 2
             bottom2 = player.y - ph // 2
