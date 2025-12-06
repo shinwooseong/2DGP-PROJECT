@@ -172,16 +172,20 @@ class QueenBee_Boss(Monster):
         map_w = getattr(getattr(server, 'tiled_map', None), 'map_width_px', 1280)
 
         # 화면 중앙 ~ 상단 영역에서 발사
-        min_y = map_h // 3
+        min_y = map_h // 4
         max_y = map_h - 10
 
-        # 왼쪽에서 오른쪽으로
-        left_sting = BeeSting(x=-50, y=random.randint(min_y, max_y), direction=1, speed=550)
-        game_world.add_object(left_sting, 1)
+        # 왼쪽에서 오른쪽으로 3개 세트 발사
+        for i in range(3):
+            speed = random.randint(400, 600)
+            left_sting = BeeSting(x=-50, y=random.randint(min_y, max_y), direction=1, speed=speed)
+            game_world.add_object(left_sting, 1)
 
-        # 오른쪽에서 왼쪽으로
-        right_sting = BeeSting(x=map_w + 50, y=random.randint(min_y, max_y), direction=-1, speed=350)
-        game_world.add_object(right_sting, 1)
+        # 오른쪽에서 왼쪽으로 3개 세트 발사
+        for i in range(3):
+            speed = random.randint(300, 500)
+            right_sting = BeeSting(x=map_w + 50, y=random.randint(min_y, max_y), direction=-1, speed=speed)
+            game_world.add_object(right_sting, 1)
 
 
     def spray_honey(self):
@@ -201,7 +205,6 @@ class QueenBee_Boss(Monster):
         print("[BOSS] 꿀 뿌리기 시작!")
 
     def spawn_honey(self):
-        """맵에 꿀 5개 랜덤 생성 (끝에서 50픽셀 안쪽, 보스 위치 제외)"""
         map_w = getattr(getattr(server, 'tiled_map', None), 'map_width_px', 1280)
         map_h = getattr(getattr(server, 'tiled_map', None), 'map_height_px', 736)
 
@@ -213,9 +216,9 @@ class QueenBee_Boss(Monster):
                 pass
         self.honey_objects.clear()
 
-        # 꿀 5개 생성 (끝에서 50픽셀 안쪽, 보스 위치 제외)
-        margin = 50
-        boss_exclusion_radius = 150  # 보스 중심에서 150픽셀 반경은 제외
+        # 꿀 5개 생성
+        margin = 150
+        boss_exclusion_radius = 250
 
         attempts = 0
         max_attempts = 100

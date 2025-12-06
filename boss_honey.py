@@ -11,7 +11,7 @@ class Honey:
         self.width = 40
         self.height = 40
         self.collected = False
-        self.scale = 0.3
+        self.scale = 0.1
 
     def update(self, dt):
         if self.collected:
