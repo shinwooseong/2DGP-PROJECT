@@ -1,8 +1,7 @@
 from Monster import Monster, Animator, Combat, SimpleAI
 import random
-import game_framework
 import game_world
-from boss_bees import BeeSting
+from boss_bees import BeeSting, BossBullet
 from boss_honey import Honey
 import server
 import os
@@ -114,9 +113,44 @@ class QueenBee_Boss(Monster):
         self.is_invincible = True  # 무적 상태 (기본적으로 무적)
         self.honey_objects = []  # 생성된 꿀 오브젝트들
 
+        # Page2 관련 변수 (HP <= 300일 때 전환)
+        self.page2 = False
+        self.page2_first_run = True
+
+        # enraged(강화) 관련: HP <= 350일 때 발사체 원형 공격을 주기적으로 실행
+        self.enraged = False
+        self.enraged_cooldown = 0.0
+        self.enraged_interval = 6.0  # 기본 주기(초)
+        self.enraged_bullet_count = 16  # 원형으로 퍼질 발사체 수
+        self.enraged_bullet_speed = 260
+        self.enraged_bullet_damage = 18
+
     def update(self, dt=0.01, frozen=False, player=None):
         if frozen or not self.alive:
             return
+
+        # enraged 상태 체크 및 발사(스턴/스프레이와 무관하게 실행)
+        try:
+            if self.hp <= 350 and not self.enraged:
+                self.enraged = True
+                # 공격 템포 증가(옵션): 기존 attack_interval을 줄임
+                try:
+                    self.attack_interval = max(0.3, self.attack_interval * 0.6)
+                except Exception:
+                    pass
+                print("[BOSS] Enraged: HP 낮음 - 원형 발사 시작")
+
+            if self.enraged:
+                self.enraged_cooldown -= dt
+                if self.enraged_cooldown <= 0:
+                    # 발사
+                    try:
+                        self.spawn_enraged_bullets(count=getattr(self, 'enraged_bullet_count', 12), speed=getattr(self, 'enraged_bullet_speed', 260), damage=getattr(self, 'enraged_bullet_damage', 15))
+                    except Exception:
+                        pass
+                    self.enraged_cooldown = getattr(self, 'enraged_interval', 6.0)
+        except Exception:
+            pass
 
         # 스턴 상태일 때
         if self.is_stunned:
@@ -151,7 +185,11 @@ class QueenBee_Boss(Monster):
             return
 
         # 일반 상태일 때는 기본 애니메이션 업데이트
-        self.animator.update(dt)
+        # page2 모드이면 전용 업데이트 루틴 사용
+        if getattr(self, 'page2', False):
+            self._update_page2_animator(dt)
+        else:
+            self.animator.update(dt)
 
         # 공격 쿨타임 업데이트
         self.attack_cooldown -= dt
@@ -183,13 +221,12 @@ class QueenBee_Boss(Monster):
 
         # 오른쪽에서 왼쪽으로 3개 세트 발사
         for i in range(3):
-            speed = random.randint(300, 500)
+            speed = random.randint(100, 300)
             right_sting = BeeSting(x=map_w + 50, y=random.randint(min_y, max_y), direction=-1, speed=speed)
             game_world.add_object(right_sting, 1)
 
 
     def spray_honey(self):
-        """꿀 뿌리기 공격 - spray 애니메이션 실행"""
         if not self.spray_animator:
             print("[BOSS] Spray 애니메이터가 없습니다!")
             return
@@ -244,6 +281,16 @@ class QueenBee_Boss(Monster):
         if len(self.honey_objects) < 5:
             print(f"[BOSS WARNING] 꿀 {5 - len(self.honey_objects)}개를 생성하지 못했습니다.")
 
+    def spawn_enraged_bullets(self, count=12, speed=260, damage=15):
+        import math
+        cx = self.x
+        cy = self.y
+        for i in range(count):
+            angle = (2.0 * math.pi) * (i / float(count))
+            b = BossBullet(cx, cy, angle, speed=speed, damage=damage)
+            game_world.add_object(b, 1)
+        print(f"[BOSS] Enraged 발사: {count}개 발사 (speed={speed}, dmg={damage})")
+
     def check_honey_collected(self):
         # 꿀이 생성되지 않았으면 체크하지 않음
         if len(self.honey_objects) == 0:
@@ -286,7 +333,7 @@ class QueenBee_Boss(Monster):
     def draw(self):
         # 카메라 보정
         try:
-            import server
+            # module-level server 사용
             cam = getattr(server, 'tiled_map', None)
             use_cam = bool(cam and getattr(cam, 'use_camera', False))
             cam_ox = cam.cam_offset_x if use_cam else 0
