@@ -73,6 +73,11 @@ class Main_character:
         # 공격 범위 디버그 표시 플래그
         self.show_attack_bb = True
 
+        # 무적 시간 관련
+        self.invincible = False  # 무적 상태 여부
+        self.invincible_timer = 0.0  # 무적 시간 타이머
+        self.invincible_duration = 1.5  # 무적 지속 시간
+
         # 8. 기본 캐릭터 상태 인스턴스 (player_states에서 가져옴)
         self.IDLE = player_states.Idle(self)
         self.WALK = player_states.Walk(self)
@@ -207,6 +212,12 @@ class Main_character:
         except Exception:
             pass
 
+        # 무적 타이머 업데이트
+        if self.invincible:
+            self.invincible_timer += dt
+            if self.invincible_timer >= self.invincible_duration:
+                self.invincible = False  # 무적 해제
+
     def draw(self):
         # 카메라 오프셋 계산
         cam = getattr(server, 'tiled_map', None)
@@ -293,6 +304,10 @@ class Main_character:
 
     def take_damage(self, damage):
         try:
+            if self.invincible:
+                print("무적 상태라서 데미지를 받지 않습니다!")
+                return
+
             self.health -= damage
         except Exception:
             self.health = getattr(self, 'health', 0) - damage
@@ -301,6 +316,10 @@ class Main_character:
             self.health = 0
             self.is_dead = True  # 죽음 플래그 설정
             print("Player died")
+        else:
+            # 무적 상태 진입
+            self.invincible = True
+            self.invincible_timer = 0.0  # 타이머 초기화
 
     def use_potion(self):
         # 포션 기능 추가 (hp 50)
