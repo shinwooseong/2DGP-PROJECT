@@ -113,10 +113,6 @@ class QueenBee_Boss(Monster):
         self.is_invincible = True  # 무적 상태 (기본적으로 무적)
         self.honey_objects = []  # 생성된 꿀 오브젝트들
 
-        # Page2 관련 변수 (HP <= 300일 때 전환)
-        self.page2 = False
-        self.page2_first_run = True
-
         # enraged(강화) 관련: HP <= 350일 때 발사체 원형 공격을 주기적으로 실행
         self.enraged = False
         self.enraged_cooldown = 0.0
@@ -125,13 +121,35 @@ class QueenBee_Boss(Monster):
         self.enraged_bullet_speed = 260
         self.enraged_bullet_damage = 18
 
+        # enraged2(더 강화): HP <= 380일 때
+        self.enraged2 = False
+
     def update(self, dt=0.01, frozen=False, player=None):
         if frozen or not self.alive:
             return
 
+        # enraged2 상태 체크: HP <= 380
+        try:
+            if self.hp <= 380 and not self.enraged2:
+                self.enraged2 = True
+                # 꿀 뿌리기 주기를 25초로 변경
+                self.spray_interval = 25.0
+                # 스턴 시간을 10초로 변경
+                self.stun_duration = 10.0
+                # 만약 현재 스턴 상태라면 즉시 해제
+                if self.is_stunned:
+                    self.is_stunned = False
+                    self.is_invincible = True
+                    self.stun_timer = 0.0
+                    self.animator.set_state('idle')
+                    print("[BOSS] HP 380 이하: 스턴 즉시 해제!")
+                print("[BOSS] Enraged2: HP 380 이하 - 꿀 뿌리기 25초 주기, 꿀 10개, 스턴 시간 10초")
+        except Exception:
+            pass
+
         # enraged 상태 체크 및 발사(스턴/스프레이와 무관하게 실행)
         try:
-            if self.hp <= 350 and not self.enraged:
+            if self.hp <= 380 and not self.enraged:
                 self.enraged = True
                 # 공격 템포 증가(옵션): 기존 attack_interval을 줄임
                 try:
@@ -185,11 +203,7 @@ class QueenBee_Boss(Monster):
             return
 
         # 일반 상태일 때는 기본 애니메이션 업데이트
-        # page2 모드이면 전용 업데이트 루틴 사용
-        if getattr(self, 'page2', False):
-            self._update_page2_animator(dt)
-        else:
-            self.animator.update(dt)
+        self.animator.update(dt)
 
         # 공격 쿨타임 업데이트
         self.attack_cooldown -= dt
@@ -253,14 +267,15 @@ class QueenBee_Boss(Monster):
                 pass
         self.honey_objects.clear()
 
-        # 꿀 5개 생성
+        # 꿀 개수: enraged2 모드이면 10개, 아니면 5개
+        honey_count = 10 if getattr(self, 'enraged2', False) else 5
         margin = 150
         boss_exclusion_radius = 250
 
         attempts = 0
         max_attempts = 100
 
-        while len(self.honey_objects) < 5 and attempts < max_attempts:
+        while len(self.honey_objects) < honey_count and attempts < max_attempts:
             x = random.randint(margin, map_w - margin)
             y = random.randint(margin, map_h - margin)
 
@@ -278,8 +293,8 @@ class QueenBee_Boss(Monster):
 
             attempts += 1
 
-        if len(self.honey_objects) < 5:
-            print(f"[BOSS WARNING] 꿀 {5 - len(self.honey_objects)}개를 생성하지 못했습니다.")
+        if len(self.honey_objects) < honey_count:
+            print(f"[BOSS WARNING] 꿀 {honey_count - len(self.honey_objects)}개를 생성하지 못했습니다.")
 
     def spawn_enraged_bullets(self, count=12, speed=260, damage=15):
         import math

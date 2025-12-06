@@ -125,25 +125,16 @@ class BossBullet:
         self.active = True
         self.scale = scale
 
-        # 가능한 발사체 이미지 폴더를 찾아서 png 파일 로드
-        possible_bases = ['MS/boss/Bullets', 'MS/boss/Bullet', 'MS/boss/The bees']
+        # Bullets 폴더의 이미지만 사용
+        base = 'MS/boss/Bullets'
         frame_paths = []
-        for base in possible_bases:
-            try:
-                if os.path.isdir(base):
-                    for fname in sorted(os.listdir(base)):
-                        if fname.lower().endswith('.png'):
-                            frame_paths.append(f"{base}/{fname}")
-            except Exception:
-                pass
-
-        # fallback: 시도적으로 기존 BeeSting 패턴 사용
-        if not frame_paths:
-            base = 'MS/boss/The bees'
-            for i in range(1, 50):
-                p = f"{base}/bullet_bee_{i:04d}.png"
-                if os.path.exists(p):
-                    frame_paths.append(p)
+        try:
+            if os.path.isdir(base):
+                for fname in sorted(os.listdir(base)):
+                    if fname.lower().endswith('.png'):
+                        frame_paths.append(f"{base}/{fname}")
+        except Exception:
+            pass
 
         # Animator 생성
         frames_map = {'fly': max(1, len(frame_paths))}
