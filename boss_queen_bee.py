@@ -345,6 +345,19 @@ class QueenBee_Boss(Monster):
             self.animator.set_state('death')
             print("[BOSS] 보스 처치!")
 
+    def get_bb(self):
+        # 실제 화면 크기: 412 x 560
+        # 약간의 여유를 두어 자연스러운 충돌
+        half_w = 206
+        half_h = 200
+
+        left = self.x - half_w
+        right = self.x + half_w
+        bottom = self.y - half_h
+        top = self.y + half_h
+
+        return (left, bottom, right, top)
+
     def draw(self):
         # 카메라 보정
         try:

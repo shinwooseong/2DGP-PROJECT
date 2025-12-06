@@ -142,10 +142,13 @@ def init():
     monsters.append(boss)
     game_world.add_object(boss, 1)
 
-    # 던전1 일반 몬스터 생성
-    #global monsters
-    #monsters = []
-    #spawn_random_monsters(count=1)
+    # 보스의 충돌 박스를 collision_boxes에 추가 (플레이어가 통과 불가능)
+    boss_bb = boss.get_bb()
+    collision_boxes.append(boss_bb)
+    print(f"[BOSS] 충돌 박스 추가: {boss_bb}")
+
+    # 보스방에서는 출구 없음
+    exit_zone = None
 
     # 던전1 출구 설정 (상단 문 위치)
     exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
@@ -332,6 +335,11 @@ def change_to_boss_room():
     monsters.append(boss)
     game_world.add_object(boss, 1)
 
+    # 보스의 충돌 박스를 collision_boxes에 추가 (플레이어가 통과 불가능)
+    boss_bb = boss.get_bb()
+    collision_boxes.append(boss_bb)
+    print(f"[BOSS] 충돌 박스 추가: {boss_bb}")
+
     # 보스방에서는 출구 없음
     exit_zone = None
 
@@ -428,11 +436,17 @@ def update(dt):
             if not monster.alive:
                 continue
 
-            monster_size = monster.scale * 25
-            monster_left = monster.x - monster_size
-            monster_right = monster.x + monster_size
-            monster_bottom = monster.y - monster_size
-            monster_top = monster.y + monster_size
+            # 보스의 get_bb() 메서드 사용 (정확한 충돌 박스)
+            if hasattr(monster, 'get_bb'):
+                monster_bb = monster.get_bb()
+                monster_left, monster_bottom, monster_right, monster_top = monster_bb
+            else:
+                # 일반 몬스터는 기존 방식 사용
+                monster_size = monster.scale * 25
+                monster_left = monster.x - monster_size
+                monster_right = monster.x + monster_size
+                monster_bottom = monster.y - monster_size
+                monster_top = monster.y + monster_size
 
             if not (left > monster_right or right < monster_left or
                     bottom > monster_top or top < monster_bottom):
