@@ -34,7 +34,10 @@ class Honey:
 
             # 수집 범위: 50픽셀
             if distance < 50:
-                print(f"[HONEY] 꿀 수집! 위치: ({self.x}, {self.y})")
+                # 체력 회복
+                heal_amount = 10
+                player.hp = min(player.hp + heal_amount, player.max_hp)
+                print(f"[HONEY] 꿀 수집! 체력 {heal_amount} 회복! 현재 HP: {player.hp}/{player.max_hp}")
                 return True
             return False
         except:
@@ -64,4 +67,3 @@ class Honey:
     def get_bb(self):
         return (self.x - self.width // 2, self.y - self.height // 2,
                 self.x + self.width // 2, self.y + self.height // 2)
-
