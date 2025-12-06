@@ -324,6 +324,20 @@ class QueenBee_Boss(Monster):
         self.stun_timer = self.stun_duration
         if self.stun_animator:
             self.stun_animator.set_state('stun')
+
+        # 모든 발사체(BossBullet, BeeSting)를 제거
+        removed_count = 0
+        try:
+            for obj in game_world.all_objects():
+                if obj.__class__.__name__ in ('BossBullet', 'BeeSting'):
+                    try:
+                        game_world.remove_object(obj)
+                        removed_count += 1
+                    except:
+                        pass
+        except Exception:
+            pass
+
         print("[BOSS] 스턴 상태 진입!")
 
     def take_damage(self, dmg):

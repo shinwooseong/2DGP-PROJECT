@@ -15,6 +15,7 @@ class BeeSting:
         self.damage = damage
         self.active = True
         self.scale = scale
+        self.frozen = False  # 보스 기절 시 정지 플래그
 
         # 프레임 경로 자동 수집
         base = 'MS/boss/The bees'
@@ -38,6 +39,10 @@ class BeeSting:
 
     def update(self, dt):
         if not self.active:
+            return
+
+        # frozen 상태이면 아무것도 하지 않음 (이동, 애니메이션, 충돌 모두 정지)
+        if self.frozen:
             return
 
         # x축 이동
@@ -124,6 +129,7 @@ class BossBullet:
         self.damage = damage
         self.active = True
         self.scale = scale
+        self.frozen = False  # 보스 기절 시 정지 플래그
 
         # Bullets 폴더의 이미지만 사용
         base = 'MS/boss/Bullets'
@@ -154,6 +160,11 @@ class BossBullet:
     def update(self, dt):
         if not self.active:
             return
+
+        # frozen 상태이면 아무것도 하지 않음 (이동, 애니메이션, 충돌 모두 정지)
+        if self.frozen:
+            return
+
         self.x += self.vx * dt
         self.y += self.vy * dt
 
