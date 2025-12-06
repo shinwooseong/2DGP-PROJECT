@@ -39,9 +39,11 @@ active_npc = None  # 현재 상호작용 중인 NPC
 
 # 상점에서 나왔는지 확인하는 플래그
 came_from_shop = False
+# 던전에서 부활했는지 확인하는 플래그
+came_from_dungeon = False
 
 def init():
-    global tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop
+    global tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop, came_from_dungeon
     global npc, npc_item, npc_dialogue_box_image
 
     # 다이얼로그 이미지와 폰트 로드
@@ -85,26 +87,43 @@ def init():
     npc_item.frame_time = 0
     npc_item.draw_scale = 1.0
 
-    # 상점에서 나왔다면 상점 입구 앞에 배치
+    # 플레이어 위치 설정
     if came_from_shop:
-        # 상점 입구 앞 위치 (상점 출구 영역 바로 아래)
+        # 상점 입구 앞 위치
         tile_size = 10
         scale = tiled_map.scale
         offset_x = tiled_map.offset_x
         offset_y = tiled_map.offset_y
         map_height_px = tiled_map.map_height_px
 
-        # 상점 입구 중앙
         shop_entrance_x = 77.5 * tile_size * scale + offset_x
         shop_entrance_y = (map_height_px - 22 * tile_size) * scale + offset_y
 
         server.player.x = shop_entrance_x
         server.player.y = shop_entrance_y
-        came_from_shop = False  # 플래그 리셋
+        came_from_shop = False
+        print(f"상점에서 복귀: 위치 ({server.player.x}, {server.player.y})")
+    elif came_from_dungeon:
+        # 던전/보스방에서 귀환했을 때 던전 입구 근처로 위치 지정
+        tile_size = 10
+        scale = tiled_map.scale
+        offset_x = tiled_map.offset_x
+        offset_y = tiled_map.offset_y
+        map_height_px = tiled_map.map_height_px
+
+        # 던전 출구 타일 범위 (37~41, y 3~6)를 기준으로 중앙 좌표 계산
+        dungeon_center_x = (37 + 41) / 2 * tile_size * scale + offset_x
+        dungeon_center_y = (map_height_px - ((3 + 6) / 2 * tile_size)) * scale + offset_y
+
+        server.player.x = dungeon_center_x
+        server.player.y = dungeon_center_y
+        came_from_dungeon = False
+        print(f"던전에서 복귀: 위치 ({server.player.x}, {server.player.y})")
     else:
         # 기본 시작 위치
-        server.player.x = 640  # 시작 X 좌표
-        server.player.y = 400  # 시작 Y 좌표
+        server.player.x = 640
+        server.player.y = 400
+        print(f"마을 시작 위치: ({server.player.x}, {server.player.y})")
 
     # 4. UI 생성 및 등록
     ui = UI()

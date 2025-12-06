@@ -16,6 +16,9 @@ from boss_queen_bee import QueenBee_Boss
 from loot import Loot
 from character_constants import CHARACTER_COLLISION_W, CHARACTER_COLLISION_H, TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 
+# 카메라 사용 여부를 기록하는 플래그
+came_from_boss_room = False
+
 # 화면 크기
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 736
@@ -94,6 +97,7 @@ def spawn_random_monsters(count=5):
 
 def init():
     global tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone, pendant_image, dialogue_font, show_return_prompt
+    global came_from_boss_room
 
 
     # 던전1부터 시작
@@ -106,11 +110,10 @@ def init():
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
     pendant_image = load_image('UI/pendant_Icon.png')
 
-    # 던전1 맵 사용 (카메라 미사용)
-    #tiled_map = TiledMap('map/dungeon1.json', use_camera=False)
+    # 보스방(카메라 사용) 설정
     tiled_map = TiledMap('map/boss_room.json', use_camera=True)
-    # 서버에 현재 tiled_map 참조 저장
     server.tiled_map = tiled_map
+    came_from_boss_room = True  # 현재 보스방에서 플레이 중임을 표시
 
     # 충돌 영역 설정
     collision_boxes = tiled_map.get_collision_boxes()
@@ -161,6 +164,7 @@ def finish():
     ui = None
 
 def handle_events():
+    global show_return_prompt, came_from_boss_room
     events = get_events()
     for event in events:
         if event.type == SDL_QUIT:
@@ -180,19 +184,25 @@ def handle_events():
                 game_framework.change_mode(shop_mode)
             elif event.key == SDLK_z:
                 # Z 키: 귀환 펜던트 사용
-                global show_return_prompt
                 show_return_prompt = True
                 print("귀환 펜던트 사용 - 확인 메시지 표시")
             elif event.key == SDLK_y:
                 # Y 키: 귀환 확인 프롬프트에서 귀환 선택
                 if show_return_prompt:
-                    # 돈이 충분한지 확인
                     if server.player.money >= return_cost:
-                        # 돈 차감
                         server.player.money -= return_cost
                         print(f"[귀환] {return_cost}골드 지불, 남은 돈: {server.player.money}골드")
 
-                        # 마을로 이동
+                        # 보스방에서 귀환할 때 카메라용 tiled_map 참조 완전히 제거
+                        if came_from_boss_room and getattr(server, 'tiled_map', None) is not None:
+                            try:
+                                server.tiled_map.cam_offset_x = 0
+                                server.tiled_map.cam_offset_y = 0
+                            except Exception:
+                                pass
+                            server.tiled_map = None
+                            came_from_boss_room = False
+
                         show_return_prompt = False
                         import village_mode
                         village_mode.came_from_dungeon = True
@@ -330,29 +340,11 @@ def update(dt):
 
     # 게임 오버 체크
     if getattr(server.player, 'is_dead', False):
-        print("======> 게임 오버! 마을로 부활합니다 ======>")
+        print("======> 게임 오버 화면으로 전환 ======>")
 
-        # 전리품을 1/3로 감소
-        for loot_key in server.player.loot_inventory:
-            original_count = server.player.loot_inventory[loot_key]
-            new_count = original_count // 3
-            server.player.loot_inventory[loot_key] = new_count
-            print(f"[전리품 손실] {loot_key}: {original_count} -> {new_count}")
-
-        # 돈도 1/3로 감소
-        original_money = server.player.money
-        new_money = original_money // 3
-        server.player.money = new_money
-        print(f"[돈 손실] {original_money}골드 -> {new_money}골드")
-
-        # 플레이어 상태 복구
-        server.player.health = server.player.max_health
-        server.player.is_dead = False
-
-        # 마을로 이동
-        import village_mode
-        village_mode.came_from_dungeon = True
-        game_framework.change_mode(village_mode)
+        # 게임 오버 모드로 전환
+        import game_over_mode
+        game_framework.change_mode(game_over_mode)
         return
 
     # 이전 위치 저장
@@ -379,8 +371,8 @@ def update(dt):
         elif server.player.y > map_height - margin:
             server.player.y = map_height - margin
 
-    # 카메라 업데이트
-    if server.tiled_map and getattr(server.tiled_map, 'use_camera', False):
+    # 카메라 업데이트 (보스방일 때만)
+    if getattr(server, 'tiled_map', None) is not None and getattr(server.tiled_map, 'use_camera', False):
         server.tiled_map.update_camera(server.player.x, server.player.y)
 
     # game_world의 모든 객체 업데이트 (BeeSting 포함)
@@ -488,11 +480,15 @@ def update(dt):
 def draw():
     clear_canvas()
 
-    # 카메라 오프셋 계산(있으면 적용)
+    # 카메라 오프셋 계산(있으면 적용) - 마을 등 카메라를 쓰지 않는 모드에서는 항상 0
     cam = getattr(server, 'tiled_map', None)
     use_cam = bool(cam and getattr(cam, 'use_camera', False))
-    cam_ox = cam.cam_offset_x if use_cam else 0
-    cam_oy = cam.cam_offset_y if use_cam else 0
+    if use_cam:
+        cam_ox = cam.cam_offset_x
+        cam_oy = cam.cam_offset_y
+    else:
+        cam_ox = 0
+        cam_oy = 0
 
     # 모든 던전에서 동일한 렌더링
     game_world.render()
