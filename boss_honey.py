@@ -36,11 +36,12 @@ class Honey:
             if distance < 50:
                 # 체력 회복
                 heal_amount = 10
-                player.hp = min(player.hp + heal_amount, player.max_hp)
-                print(f"[HONEY] 꿀 수집! 체력 {heal_amount} 회복! 현재 HP: {player.hp}/{player.max_hp}")
+                player.health = min(player.health + heal_amount, player.max_health)
+                print(f"[HONEY] 꿀 수집! 체력 {heal_amount} 회복! 현재 HP: {player.health}/{player.max_health}")
                 return True
             return False
-        except:
+        except Exception as e:
+            print(f"[HONEY ERROR] 꿀 수집 오류: {e}")
             return False
 
     def draw(self):
