@@ -344,7 +344,7 @@ def change_to_boss_room():
     exit_zone = None
 
 def update(dt):
-    global loots, all_monsters_cleared
+    global loots, all_monsters_cleared, came_from_boss_room
 
     # 게임 오버 체크
     if getattr(server.player, 'is_dead', False):
@@ -354,6 +354,27 @@ def update(dt):
         import game_over_mode
         game_framework.change_mode(game_over_mode)
         return
+    
+    # 보스 처치 확인 (던전3 - 보스방) - 보스가 죽었을 때 바로 감지
+    if current_dungeon == 3:
+        for monster in monsters[:]:
+            if not monster.alive and all_monsters_cleared == False:
+                print("======> 보스 처치 완료! 엔딩 모드로 전환 ======>")
+                all_monsters_cleared = True
+                
+                # 보스방에서 카메라 참조 제거
+                if came_from_boss_room and getattr(server, 'tiled_map', None) is not None:
+                    try:
+                        server.tiled_map.cam_offset_x = 0
+                        server.tiled_map.cam_offset_y = 0
+                    except Exception:
+                        pass
+                    server.tiled_map = None
+                    came_from_boss_room = False
+                
+                import ending_mode
+                game_framework.change_mode(ending_mode)
+                return
 
     # 이전 위치 저장
     prev_x = server.player.x
