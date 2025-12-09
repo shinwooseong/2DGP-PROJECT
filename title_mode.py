@@ -55,25 +55,39 @@ def draw():
     # 튜토리얼 표시
     if show_tutorial and dialogue_box_image and dialogue_font:
         # 다이얼로그 박스 그리기 (화면 중앙)
-        dialogue_box_image.draw(main_chracter.SCREEN_W // 2, main_chracter.SCREEN_H // 2)
+        dialogue_box_image.draw(main_chracter.SCREEN_W // 2, main_chracter.SCREEN_H // 2, 420, 480)
 
         # 튜토리얼 텍스트 그리기
-        dialogue_font.draw(main_chracter.SCREEN_W // 2 - 150, main_chracter.SCREEN_H // 2 + 150,
-                           "【 조작법 】", (255, 255, 255))
+        text_x = main_chracter.SCREEN_W // 2 - 150
+        text_y = main_chracter.SCREEN_H // 2 + 180
 
-        dialogue_font.draw(main_chracter.SCREEN_W // 2 - 150, main_chracter.SCREEN_H // 2 + 100,
-                           "이동: ↑↓←→ 방향키", (0, 0, 0))
-        dialogue_font.draw(main_chracter.SCREEN_W // 2 - 150, main_chracter.SCREEN_H // 2 + 60,
-                           "상호작용: Enter", (0, 0, 0))
-        dialogue_font.draw(main_chracter.SCREEN_W // 2 - 150, main_chracter.SCREEN_H // 2 + 20,
-                           "인벤토리: U", (0, 0, 0))
-        dialogue_font.draw(main_chracter.SCREEN_W // 2 - 150, main_chracter.SCREEN_H // 2 - 20,
-                           "거래/선택: Y(네) / N(아니오)", (0, 0, 0))
-        dialogue_font.draw(main_chracter.SCREEN_W // 2 - 150, main_chracter.SCREEN_H // 2 - 60,
-                           "취소/대화 종료: ESC", (0, 0, 0))
+        tutorial_texts = [
+            "【 조작법 】",
+            "",
+            "이동: ↑↓←→ 방향키",
+            "공격: A 키",
+            "물약 사용: S 키",
+            "대시: Space 키",
+            "인벤토리: U 키",
+            "배낭: U 키",
+            "상호작용: Enter",
+            "거래 선택: Y(네) / N(아니오)",
+            "귀환 펜던트: Z 키",
+            "던전 귀환: Z 키 (200원)",
+            "취소/대화 종료: ESC",
+            "닫기: ESC 또는 H"
+        ]
 
-        dialogue_font.draw(main_chracter.SCREEN_W // 2 - 150, main_chracter.SCREEN_H // 2 - 120,
-                           "닫기: ESC 또는 H", (255, 100, 0))
+        for text in tutorial_texts:
+            if text == "【 조작법 】":
+                dialogue_font.draw(text_x + 80, text_y, text, (25, 25, 55))
+            elif text.startswith("닫기"):
+                dialogue_font.draw(text_x, text_y, text, (255, 100, 0))
+            elif text == "":
+                pass  # 빈 줄
+            else:
+                dialogue_font.draw(text_x, text_y, text, (0, 0, 0))
+            text_y -= 25
     else:
         # 타이틀 화면에서 항상 표시되는 키 설명
         dialogue_font.draw(50, main_chracter.SCREEN_H - 50,

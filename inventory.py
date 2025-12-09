@@ -13,13 +13,15 @@ SCREEN_W, SCREEN_H = main_chracter.SCREEN_W, main_chracter.SCREEN_H
 backpack_image = None
 loot_images = {}  # loot1 ~ loot4 이미지 딕셔너리
 number_font = None
+small_font = None  # 작은 글씨 폰트
+npc_text_image = None  # NPC_text.png 이미지
 
 # 현재 플레이어 참조
 current_player = None
 
 
 def init():
-    global backpack_image, loot_images, number_font
+    global backpack_image, loot_images, number_font, small_font, npc_text_image
 
     try:
         backpack_image = load_image('UI/backpack_in.png')
@@ -33,18 +35,28 @@ def init():
         loot_img = load_image(f'LOOT/loot{i}.png')
         loot_images[f'loot{i}'] = loot_img
 
-
     # 숫자 폰트 로드
     number_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 32)
 
+    # 작은 글씨 폰트 로드
+    small_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 18)
+
+    # NPC_text.png 이미지 로드
+    try:
+        npc_text_image = load_image('UI/NPC_text.png')
+    except Exception as e:
+        print(f"NPC_text.png 로드 오류: {e}")
+        npc_text_image = None
 
 
 def finish():
-    global backpack_image, loot_images, number_font
+    global backpack_image, loot_images, number_font, small_font, npc_text_image
     if backpack_image:
         del backpack_image
     loot_images = {}
     number_font = None
+    small_font = None
+    npc_text_image = None
 
 
 def handle_events():
@@ -71,7 +83,7 @@ def draw():
 
     # 배낭 UI 그리기
     if backpack_image:
-        center_x = SCREEN_W // 2
+        center_x = SCREEN_W // 2 - 120  # 더 왼쪽으로 이동
         center_y = SCREEN_H // 2
 
         # 배낭 이미지 크기
@@ -89,7 +101,7 @@ def draw():
         # 배낭 그리기
         backpack_image.draw(center_x, center_y, draw_w, draw_h)
 
-        # 배낭을 4등분해서 전리품 표시 -> 이것때문에 배낭이미지 변경함
+        # 배낭을 4등분해서 전리품 표시
         if server.player and loot_images:
             # 4등분 영역 계산
             slot_width = draw_w // 2
@@ -128,6 +140,49 @@ def draw():
                         text_y = slot_y - 40
                         number_font.draw(slot_x - 20, text_y, f"{loot_count}", (255, 255, 255))
 
+    # NPC_text.png 이미지와 설명 그리기 (배낭 오른쪽)
+    if npc_text_image and server.player:
+        # NPC_text.png 이미지 위치 및 크기
+        npc_text_x = SCREEN_W // 2 + 350
+        npc_text_y = SCREEN_H // 2
+        npc_text_w = 420
+        npc_text_h = 480
+
+        # NPC_text.png 그리기
+        npc_text_image.draw(npc_text_x, npc_text_y, npc_text_w, npc_text_h)
+
+        # NPC_text.png 위에 게임 설명 그리기 (검은색 작은 글씨)
+        if small_font:
+            descriptions = [
+                "[ 게임 설명서 ]",
+                "",
+                "조작법:",
+                "A 키 - 공격",
+                "S 키 - 물약 (HP 50)",
+                "Z 키 - 귀환 (200원)",
+                "",
+                "마을 NPC:",
+                "요정 - 전리품 3개씩",
+                "       체력한계 +50",
+                "대장장이 - 전리품 판매",
+                "",
+                "상점: 물약 구매",
+                "",
+                "던전:",
+                "전리품 랜덤 드롭",
+                "사망 시 1/3 손실",
+                "",
+                "보스:",
+                "꿀 먹으면 기절",
+                "기절 중 공격!"
+            ]
+
+            text_x = npc_text_x - 40
+            text_y = npc_text_y + 180
+
+            for line in descriptions:
+                small_font.draw(text_x, text_y, line, (0, 0, 0))
+                text_y -= 16
 
     update_canvas()
 
