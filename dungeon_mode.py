@@ -344,11 +344,24 @@ def change_to_boss_room():
     exit_zone = None
 
 def update(dt):
-    global loots, all_monsters_cleared, came_from_boss_room
+    global loots, all_monsters_cleared, came_from_boss_room, tiled_map
 
     # 게임 오버 체크
     if getattr(server.player, 'is_dead', False):
         print("======> 게임 오버 화면으로 전환 ======>")
+
+        # 카메라 완전 초기화 (보스방에서 게임 오버 발생 시)
+        if came_from_boss_room and getattr(server, 'tiled_map', None) is not None:
+            server.tiled_map.cam_offset_x = 0
+            server.tiled_map.cam_offset_y = 0
+            server.tiled_map.use_camera = False
+
+            server.tiled_map = None
+            came_from_boss_room = False
+            if tiled_map is not None:
+                tiled_map.use_camera = False
+                tiled_map.cam_offset_x = 0
+                tiled_map.cam_offset_y = 0
 
         # 게임 오버 모드로 전환
         import game_over_mode
@@ -362,16 +375,26 @@ def update(dt):
                 print("======> 보스 처치 완료! 엔딩 모드로 전환 ======>")
                 all_monsters_cleared = True
                 
-                # 보스방에서 카메라 참조 제거
+                # 보스방에서 카메라 참조 완전히 제거
                 if came_from_boss_room and getattr(server, 'tiled_map', None) is not None:
                     try:
                         server.tiled_map.cam_offset_x = 0
                         server.tiled_map.cam_offset_y = 0
-                    except Exception:
-                        pass
+                        server.tiled_map.use_camera = False
+                    except Exception as e:
+                        print(f"카메라 초기화 오류: {e}")
                     server.tiled_map = None
                     came_from_boss_room = False
-                
+
+                # 로컬 tiled_map도 카메라 비활성화
+                if tiled_map is not None:
+                    try:
+                        tiled_map.use_camera = False
+                        tiled_map.cam_offset_x = 0
+                        tiled_map.cam_offset_y = 0
+                    except Exception:
+                        pass
+
                 import ending_mode
                 game_framework.change_mode(ending_mode)
                 return

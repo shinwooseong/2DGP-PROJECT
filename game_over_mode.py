@@ -46,6 +46,16 @@ def handle_events():
                     server.player.health = server.player.max_health
                     server.player.key_map = {'UP': False, 'DOWN': False, 'LEFT': False, 'RIGHT': False}
 
+                # 카메라 완전 초기화 (보스방 카메라 참조 제거)
+                if getattr(server, 'tiled_map', None) is not None:
+                    try:
+                        server.tiled_map.cam_offset_x = 0
+                        server.tiled_map.cam_offset_y = 0
+                        server.tiled_map.use_camera = False
+                    except Exception as e:
+                        print(f"카메라 초기화 오류: {e}")
+                    server.tiled_map = None
+
                 # 던전/상점 플래그 초기화 (완전 초기 시작)
                 village_mode.came_from_shop = False
                 village_mode.came_from_dungeon = False
