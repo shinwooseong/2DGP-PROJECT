@@ -4,8 +4,7 @@ import title_mode as start_mode
 import main_chracter
 import server
 
-# 게임 제작 끝!
-# 스크린 크기는 main_chracter 모듈에서 가져옴
+# 게임 제작 끝!# 스크린 크기는 main_chracter 모듈에서 가져옴
 import main_chracter
 
 open_canvas(main_chracter.SCREEN_W, main_chracter.SCREEN_H,sync=True)
