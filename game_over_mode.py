@@ -25,6 +25,28 @@ def init():
     # 오버레이 알파값 초기화
     overlay_alpha = 0.0
 
+    # 플레이어 전리품과 돈 손실 처리 (1/3씩 손실)
+    if server.player is not None:
+        # 돈 1/3 손실
+        lost_money = server.player.money // 3
+        server.player.money -= lost_money
+
+        # 전리품 1/3 손실
+        loot_items = []
+        for loot_key in server.player.loot_inventory:
+            current_count = server.player.loot_inventory[loot_key]
+            lost_count = current_count // 3
+            if lost_count > 0:
+                loot_items.append(f"{loot_key}: {lost_count}개")
+                server.player.loot_inventory[loot_key] -= lost_count
+
+        # 손실 정보 출력
+        print(f"[게임 오버] {lost_money}골드 손실! (남은 돈: {server.player.money}골드)")
+        if loot_items:
+            print(f"[게임 오버] 전리품 손실: {', '.join(loot_items)}")
+        else:
+            print("[게임 오버] 손실된 전리품이 없습니다")
+
     print("======> 게임 오버! ======>")
 
 def finish():

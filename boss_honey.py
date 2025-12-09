@@ -38,10 +38,19 @@ class Honey:
                 heal_amount = 10
                 player.health = min(player.health + heal_amount, player.max_health)
                 print(f"[HONEY] 꿀 수집! 체력 {heal_amount} 회복! 현재 HP: {player.health}/{player.max_health}")
+
+                # 꿀 먹는 소리 재생
+                try:
+                    eat_honey_sound = load_wav('Sound/eat_honey.wav')
+                    if hasattr(eat_honey_sound, 'set_volume'):
+                        eat_honey_sound.set_volume(64)
+                    eat_honey_sound.play()
+                except Exception as e:
+                    pass
+
                 return True
             return False
         except Exception as e:
-            print(f"[HONEY ERROR] 꿀 수집 오류: {e}")
             return False
 
     def draw(self):

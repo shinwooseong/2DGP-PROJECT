@@ -78,16 +78,16 @@ def init():
     game_world.add_object(server.player, 1)     # 플레이어 레이어
     game_world.add_object(npc_water, 1)  # NPC 레이어
 
-    # 디버그 정보 출력 (유지)
-    print(f"======> 로드된 충돌 상자 개수: {len(collision_boxes)}")
-    print(f"맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px} 픽셀")
-    print(f"스케일: {tiled_map.scale}")
-    print(f"오프셋: ({tiled_map.offset_x}, {tiled_map.offset_y})")
+    # 디버그 정보 출력 (주석 처리됨)
+    # print(f"======> 로드된 충돌 상자 개수: {len(collision_boxes)}")
+    # print(f"맵 크기: {tiled_map.map_width_px}x{tiled_map.map_height_px} 픽셀")
+    # print(f"스케일: {tiled_map.scale}")
+    # print(f"오프셋: ({tiled_map.offset_x}, {tiled_map.offset_y})")
 
-    if collision_boxes:
-        print(f"첫 번째 충돌 박스: {collision_boxes[0]}")
-        for i, box in enumerate(collision_boxes[:5]):
-            print(f"  박스 {i}: {box}")
+    # if collision_boxes:
+    #     print(f"첫 번째 충돌 박스: {collision_boxes[0]}")
+    #     for i, box in enumerate(collision_boxes[:5]):
+    #         print(f"  박스 {i}: {box}")
 
     # 상점 배경음악 로드 및 재생
     try:
@@ -235,10 +235,10 @@ def draw():
     clear_canvas()
     game_world.render()
 
-    # 충돌 박스들을 하얀색 테두리로 화면에 표시
-    for box in collision_boxes:
-        left, bottom, right, top = box
-        draw_rectangle(left, bottom, right, top)
+    # 충돌 박스들을 하얀색 테두리로 화면에 표시 - 주석 처리됨
+    # for box in collision_boxes:
+    #     left, bottom, right, top = box
+    #     draw_rectangle(left, bottom, right, top)
 
     # NPC 대화 표시
     if show_npc_dialogue and active_npc is not None and dialogue_box_image and dialogue_font:

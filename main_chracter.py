@@ -31,24 +31,24 @@ class Main_character:
         self.frame = 0
 
         # 3. 스탯
-        self.health = 300
-        self.max_health = 300
-        self.money = 0
+        self.health = 100
+        self.max_health = 100
+        self.money = 100
 
         # 포션 개수
         self.hp_potion_count = 0
 
         # 전리품 인벤토리 (loot1 ~ loot4 각각의 개수)
         self.loot_inventory = {
-            'loot1': 7,
-            'loot2': 7,
-            'loot3': 7,
-            'loot4': 7
+            'loot1': 1,
+            'loot2': 0,
+            'loot3': 0,
+            'loot4': 1
         }
 
         # 캐릭터별 공격력 설정
-        self.base_attack = 20  # 기본 캐릭터 공격력
-        self.transform_attack = 10  # 변신 캐릭터 공격력
+        self.base_attack = 25  # 기본 캐릭터 공격력
+        self.transform_attack = 12  # 변신 캐릭터 공격력
         self.attack = self.base_attack  # 현재 공격력 (초기값은 기본 캐릭터)
 
         # 4. 입력 맵
@@ -266,51 +266,51 @@ class Main_character:
                     draw_x, draw_y, TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H
                 )
 
-            # 디버그: 실제 충돌 범위 표시 (변신 캐릭터)
-            draw_rectangle(
-                self.x - TRANSFORM_COLLISION_W // 2 + cam_ox,
-                self.y - TRANSFORM_COLLISION_H // 2 + cam_oy,
-                self.x + TRANSFORM_COLLISION_W // 2 + cam_ox,
-                self.y + TRANSFORM_COLLISION_H // 2 + cam_oy
-            )
-            # 발 위치 표시 (노란색 작은 점)
-            draw_rectangle(self.x - 2 + cam_ox, self.y - 2 + cam_oy, self.x + 2 + cam_ox, self.y + 2 + cam_oy)
+            # 디버그: 실제 충돌 범위 표시 (변신 캐릭터) - 주석 처리됨
+            # draw_rectangle(
+            #     self.x - TRANSFORM_COLLISION_W // 2 + cam_ox,
+            #     self.y - TRANSFORM_COLLISION_H // 2 + cam_oy,
+            #     self.x + TRANSFORM_COLLISION_W // 2 + cam_ox,
+            #     self.y + TRANSFORM_COLLISION_H // 2 + cam_oy
+            # )
+            # 발 위치 표시 (노란색 작은 점) - 주석 처리됨
+            # draw_rectangle(self.x - 2 + cam_ox, self.y - 2 + cam_oy, self.x + 2 + cam_ox, self.y + 2 + cam_oy)
             return
 
         try:
             self.state_machine.draw()
 
-            # 공격 범위 표시 (빨간 박스)
-            if self.show_attack_bb:
-                bb = self.get_bb()
-                if bb is not None:
-                    left, bottom, right, top = bb
-                    # 빨간색으로 공격 범위 표시
-                    if use_cam:
-                        draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
-                    else:
-                        draw_rectangle(left, bottom, right, top)
+            # 공격 범위 표시 (빨간 박스) - 주석 처리됨
+            # if self.show_attack_bb:
+            #     bb = self.get_bb()
+            #     if bb is not None:
+            #         left, bottom, right, top = bb
+            #         # 빨간색으로 공격 범위 표시
+            #         if use_cam:
+            #             draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
+            #         else:
+            #             draw_rectangle(left, bottom, right, top)
 
-            # 디버그: 실제 충돌 범위 표시 (캐릭터 크기에 맞게)
-            if self.is_transformed:
-                # 변신 상태일 때는 변신 캐릭터 충돌 범위
-                draw_rectangle(
-                    self.x - TRANSFORM_COLLISION_W // 2 + cam_ox,
-                    self.y - TRANSFORM_COLLISION_H // 2 + cam_oy,
-                    self.x + TRANSFORM_COLLISION_W // 2 + cam_ox,
-                    self.y + TRANSFORM_COLLISION_H // 2 + cam_oy
-                )
-            else:
-                # 기본 상태일 때는 기본 캐릭터 충돌 범위
-                draw_rectangle(
-                    self.x - CHARACTER_COLLISION_W // 2 + cam_ox,
-                    self.y - CHARACTER_COLLISION_H // 2 + cam_oy,
-                    self.x + CHARACTER_COLLISION_W // 2 + cam_ox,
-                    self.y + CHARACTER_COLLISION_H // 2 + cam_oy
-                )
+            # 디버그: 실제 충돌 범위 표시 (캐릭터 크기에 맞게) - 주석 처리됨
+            # if self.is_transformed:
+            #     # 변신 상태일 때는 변신 캐릭터 충돌 범위
+            #     draw_rectangle(
+            #         self.x - TRANSFORM_COLLISION_W // 2 + cam_ox,
+            #         self.y - TRANSFORM_COLLISION_H // 2 + cam_oy,
+            #         self.x + TRANSFORM_COLLISION_W // 2 + cam_ox,
+            #         self.y + TRANSFORM_COLLISION_H // 2 + cam_oy
+            #     )
+            # else:
+            #     # 기본 상태일 때는 기본 캐릭터 충돌 범위
+            #     draw_rectangle(
+            #         self.x - CHARACTER_COLLISION_W // 2 + cam_ox,
+            #         self.y - CHARACTER_COLLISION_H // 2 + cam_oy,
+            #         self.x + CHARACTER_COLLISION_W // 2 + cam_ox,
+            #         self.y + CHARACTER_COLLISION_H // 2 + cam_oy
+            #     )
 
-            # 발 위치 표시 (노란색 작은 점)
-            draw_rectangle(self.x - 2 + cam_ox, self.y - 2 + cam_oy, self.x + 2 + cam_ox, self.y + 2 + cam_oy)
+            # 발 위치 표시 (노란색 작은 점) - 주석 처리됨
+            # draw_rectangle(self.x - 2 + cam_ox, self.y - 2 + cam_oy, self.x + 2 + cam_ox, self.y + 2 + cam_oy)
         except Exception:
             pass
 
@@ -358,11 +358,10 @@ class Main_character:
 
             # 포션 사용 효과음 재생
             try:
-                import dungeon_mode
-                if dungeon_mode.se_potion:
-                    dungeon_mode.se_potion.play()
+                if server.se_potion:
+                    server.se_potion.play()
             except Exception as e:
-                print(f"[SE] potion.wav 재생 실패: {e}")
+                pass
 
             return True
         else:
@@ -431,7 +430,7 @@ class Main_character:
 
             # 방향에 따른 공격 범위 설정 (칼이 뻗는 범위)
             attack_reach = 60  # 공격 범위
-            attack_width = 40   # 공격 폭
+            attack_width = 50   # 공격 폭
 
             # 각 방향 별로 각기 적용
             if self.dir == 'DOWN':
@@ -459,10 +458,9 @@ class Main_character:
             if self.state_machine.cur_state is not self.TRANSFORM_ATTACK:
                 return None
 
-            # 변신 캐릭터는 공격 범위가 더 작음
-            # 몸집이 작으니까
-            attack_reach = 40  # 공격 범위
-            attack_width = 30   # 공격 폭
+
+            attack_reach = 60  # 공격 범위
+            attack_width = 50   # 공격 폭
 
             if self.dir == 'LEFT':
                 return (self.x - attack_reach,

@@ -488,22 +488,22 @@ def draw():
     clear_canvas()
     game_world.render()
 
-    # 충돌 박스들을 화면에 표시 (디버그용)
-    for box in collision_boxes:
-        left, bottom, right, top = box
-        draw_rectangle(left, bottom, right, top)
+    # 충돌 박스들을 화면에 표시 (디버그용) - 주석 처리됨
+    # for box in collision_boxes:
+    #     left, bottom, right, top = box
+    #     draw_rectangle(left, bottom, right, top)
 
-    # 던전 출구 영역 표시 (디버그용 - 노란색)
-    if exit_zone_dungeon:
-        left, bottom, right, top = exit_zone_dungeon
-        for i in range(3):
-            draw_rectangle(left - i, bottom - i, right + i, top + i)
+    # 던전 출구 영역 표시 (디버그용 - 노란색) - 주석 처리됨
+    # if exit_zone_dungeon:
+    #     left, bottom, right, top = exit_zone_dungeon
+    #     for i in range(3):
+    #         draw_rectangle(left - i, bottom - i, right + i, top + i)
 
-    # 상점 출구 영역 표시 (디버그용 - 초록색처럼)
-    if exit_zone_shop:
-        left, bottom, right, top = exit_zone_shop
-        for i in range(5):  # 더 두꺼운 선으로 구분
-            draw_rectangle(left - i, bottom - i, right + i, top + i)
+    # 상점 출구 영역 표시 (디버그용 - 초록색처럼) - 주석 처리됨
+    # if exit_zone_shop:
+    #     left, bottom, right, top = exit_zone_shop
+    #     for i in range(5):  # 더 두꺼운 선으로 구분
+    #         draw_rectangle(left - i, bottom - i, right + i, top + i)
 
     # 던전 경고 다이얼로그 표시
     if show_dungeon_warning and dialogue_box_image and dialogue_font:

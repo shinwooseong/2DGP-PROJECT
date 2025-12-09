@@ -296,7 +296,7 @@ def change_to_dungeon2():
     game_world.add_object(server.player, 1)
 
     # 던전2 몬스터 생성
-    spawn_random_monsters(count=2)
+    spawn_random_monsters(count=9)
 
     # 던전2도 상단 문 위치에 출구 설정
     exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
@@ -578,24 +578,24 @@ def draw():
     # 모든 던전에서 동일한 렌더링
     game_world.render()
 
-    # 충돌 박스 표시
-    for box in collision_boxes:
-        left, bottom, right, top = box
-        if use_cam:
-            draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
-        else:
-            draw_rectangle(left, bottom, right, top)
+    # 충돌 박스 표시 - 주석 처리됨
+    # for box in collision_boxes:
+    #     left, bottom, right, top = box
+    #     if use_cam:
+    #         draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
+    #     else:
+    #         draw_rectangle(left, bottom, right, top)
 
-    # 몬스터 공격 범위 표시
-    for monster in monsters:
-        if monster.alive and monster.show_attack_range:
-            attack_bb = monster.get_attack_bb()
-            if attack_bb is not None:
-                left, bottom, right, top = attack_bb
-                if use_cam:
-                    draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
-                else:
-                    draw_rectangle(left, bottom, right, top)
+    # 몬스터 공격 범위 표시 - 주석 처리됨
+    # for monster in monsters:
+    #     if monster.alive and monster.show_attack_range:
+    #         attack_bb = monster.get_attack_bb()
+    #         if attack_bb is not None:
+    #             left, bottom, right, top = attack_bb
+    #             if use_cam:
+    #                 draw_rectangle(left + cam_ox, bottom + cam_oy, right + cam_ox, top + cam_oy)
+    #             else:
+    #                 draw_rectangle(left, bottom, right, top)
 
     # 던전1 메시지
     if current_dungeon == 1 and all_monsters_cleared and message_font is not None:

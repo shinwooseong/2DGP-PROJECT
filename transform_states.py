@@ -13,8 +13,8 @@ from character_constants import (
 se_trans_attack = None
 
 # 몸집이 작아서 속도가 더 빠름
-WALK_SPEED = 180.0
-ROLL_SPEED = 360.0
+WALK_SPEED = 200.0
+ROLL_SPEED = 400.0
 ROLL_DISTANCE = 80.0
 
 class TransformIdle:
