@@ -1,8 +1,8 @@
 from pico2d import *
-from sdl2 import SDL_QUIT, SDL_KEYDOWN
+from sdl2 import SDL_QUIT, SDL_KEYDOWN, SDLK_RETURN
 
 import game_framework
-import main_chracter
+import village_mode
 from NPC import NPC
 
 # 화면 크기
@@ -14,11 +14,9 @@ dialogue_box_image = None
 dialogue_font = None
 npcs = []  # NPC 리스트
 show_ending = False
-ending_time = 0.0  # 엔딩 시작 시간
-ending_duration = 5.0  # 엔딩 표시 시간 (5초)
 
 def init():
-    global dialogue_box_image, dialogue_font, npcs, show_ending, ending_time
+    global dialogue_box_image, dialogue_font, npcs, show_ending
 
     # 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/NPC_text.png')
@@ -26,7 +24,6 @@ def init():
 
     # 엔딩 시작
     show_ending = True
-    ending_time = get_time()
 
     # NPC들 생성 (화면 양 옆에 배치)
     npcs = []
@@ -70,8 +67,6 @@ def finish():
     npcs = []
 
 def update(dt):
-    global show_ending, ending_time
-
     # NPC 애니메이션 업데이트
     for npc in npcs:
         if npc.image:
@@ -80,13 +75,8 @@ def update(dt):
                 npc.frame = (npc.frame + 1) % npc.frame_max
                 npc.frame_time = 0
 
-    # 일정 시간 후 자동으로 게임 종료
-    if get_time() - ending_time > ending_duration:
-        game_framework.quit()
-
 def draw():
     clear_canvas()
-
 
     # NPC 그리기 (오른쪽부터 역순으로 그리기 - 좌우 균형)
     for i, npc in enumerate(npcs):
@@ -117,9 +107,9 @@ def draw():
         dialogue_font.draw(SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2,
                           "당신이 영웅입니다!", (255, 255, 255))
 
-        # 스킵 안내
+        # 엔터 안내
         dialogue_font.draw(SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT // 2 - 80,
-                          "아무 키나 누르면 게임을 종료합니다.", (200, 200, 200))
+                          "ENTER를 눌러 계속하세요.", (200, 200, 200))
 
     update_canvas()
 
@@ -129,8 +119,10 @@ def handle_events():
         if event.type == SDL_QUIT:
             game_framework.quit()
         elif event.type == SDL_KEYDOWN:
-            # 아무 키나 누르면 종료
-            game_framework.quit()
+            if event.key == SDLK_RETURN:
+                # 엔터 키를 누르면 마을로 돌아가기
+                village_mode.came_from_dungeon = False
+                game_framework.change_mode(village_mode)
 
 def pause(): pass
 def resume(): pass

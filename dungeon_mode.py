@@ -375,6 +375,15 @@ def update(dt):
                 print("======> 보스 처치 완료! 엔딩 모드로 전환 ======>")
                 all_monsters_cleared = True
                 
+                # 보스 처치 보상: 플레이어 스탯 증가
+                server.player.max_health += 100  # 최대 체력 100 증가
+                server.player.health = server.player.max_health  # 체력 완전 회복
+                server.player.base_attack += 40 # 공격력 40 증가
+                server.player.attack = server.player.base_attack  # 현재 공격력 업데이트
+                server.player.money += 10000
+                server.player.hp_potion_count += 5
+
+
                 # 보스방에서 카메라 참조 완전히 제거
                 if came_from_boss_room and getattr(server, 'tiled_map', None) is not None:
                     try:
@@ -598,6 +607,32 @@ def draw():
         dialogue_font.draw(screen_center_x - 180, screen_center_y + 10, cost_message, (255, 255, 255))
         hint_message = "Y: 예 / N: 아니오"
         dialogue_font.draw(screen_center_x - 180, screen_center_y - 30, hint_message, (200, 200, 200))
+
+    # 보스 체력 표시 (보스방에서만)
+    if current_dungeon == 3 and len(monsters) > 0:
+        boss = monsters[0]  # 보스는 항상 첫 번째 몬스터
+        if boss.alive:
+            # 카메라 오프셋 적용
+            cam = getattr(server, 'tiled_map', None)
+            use_cam = bool(cam and getattr(cam, 'use_camera', False))
+            cam_ox = cam.cam_offset_x if use_cam else 0
+            cam_oy = cam.cam_offset_y if use_cam else 0
+
+            # 보스 머리 위에 체력 표시
+            boss_hp_x = boss.x + cam_ox
+            boss_hp_y = boss.y + 100 + cam_oy  # 보스 위쪽 100픽셀
+
+            # 체력 바 배경 (검은색)
+            draw_rectangle(boss_hp_x - 60, boss_hp_y - 10, boss_hp_x + 60, boss_hp_y + 10)
+
+            # 체력 바 (빨간색)
+            hp_ratio = max(0, boss.hp / boss.max_hp)
+            draw_rectangle(boss_hp_x - 60, boss_hp_y - 10, boss_hp_x - 60 + (120 * hp_ratio), boss_hp_y + 10)
+
+            # 체력 텍스트
+            if message_font:
+                hp_text = f"{boss.hp}/{boss.max_hp}"
+                message_font.draw(boss_hp_x - 30, boss_hp_y - 25, hp_text, (255, 100, 100))
 
     update_canvas()
 
