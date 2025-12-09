@@ -24,6 +24,10 @@ def init():
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 32)
     background_image = load_image('map/dungeon.png')
 
+    # 보스 처치 플래그 설정
+    import server
+    server.boss_defeated = True
+
     # 엔딩 시작
     show_ending = True
 

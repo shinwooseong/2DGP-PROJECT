@@ -97,6 +97,33 @@ def init():
     # 2. 충돌 영역 설정
     collision_boxes = tiled_map.get_collision_boxes()
 
+    # 2.5 마을 배경음악 로드 및 재생
+    try:
+        # 보스 처치 여부에 따라 다른 음악 재생
+        if getattr(server, 'boss_defeated', False):
+            # 보스 처치 후: win_village.wav 재생
+            if server.win_village_bgm is None:
+                server.win_village_bgm = load_music('Sound/win_village.wav')
+                if hasattr(server.win_village_bgm, 'set_volume'):
+                    server.win_village_bgm.set_volume(90)
+            # 기존 음악 정지
+            if server.village_bgm:
+                server.village_bgm.stop()
+            server.win_village_bgm.play()
+            print("[Village] win_village.wav 재생 시작")
+        else:
+            # 일반 마을: village.mp3 재생
+            if server.village_bgm is None:
+                server.village_bgm = load_music('Sound/village.mp3')
+                if hasattr(server.village_bgm, 'set_volume'):
+                    server.village_bgm.set_volume(104)
+            # 기존 win_village 음악 정지
+            if server.win_village_bgm:
+                server.win_village_bgm.stop()
+            server.village_bgm.play()
+            print("[Village] village.mp3 재생 시작")
+    except Exception as e:
+        print(f"[Village] 배경음악 로드 실패: {e}")
 
     # NPC 생성
     # 요정

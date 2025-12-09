@@ -115,7 +115,7 @@ def init():
         bgm.repeat_play()
 
     # 던전1부터 시작
-    current_dungeon = 3
+    current_dungeon = 1
     all_monsters_cleared = False
     show_return_prompt = False
 
@@ -124,16 +124,16 @@ def init():
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
     pendant_image = load_image('UI/pendant_Icon.png')
 
-    # 보스방(카메라 사용) 설정
-    tiled_map = TiledMap('map/boss_room.json', use_camera=True)
+    # 던전1 맵 로드
+    tiled_map = TiledMap('map/dungeon1.json', use_camera=False)
     server.tiled_map = tiled_map
-    came_from_boss_room = True  # 현재 보스방에서 플레이 중임을 표시
+    came_from_boss_room = False
 
     # 충돌 영역 설정
     collision_boxes = tiled_map.get_collision_boxes()
 
     # 플레이어 시작 위치
-    server.player.x = 950
+    server.player.x = 640
     server.player.y = 50
 
     # UI 생성 및 등록
@@ -146,21 +146,10 @@ def init():
     game_world.add_object(tiled_map, 0)
     game_world.add_object(server.player, 1)
 
+    # 던전1 몬스터 생성
     global monsters
     monsters = []
-    map_center_x = tiled_map.map_width_px // 2
-    map_center_y = tiled_map.map_height_px // 2
-    boss = QueenBee_Boss(x=map_center_x, y=map_center_y)
-    monsters.append(boss)
-    game_world.add_object(boss, 1)
-
-    # 보스의 충돌 박스를 collision_boxes에 추가 (플레이어가 통과 불가능)
-    boss_bb = boss.get_bb()
-    collision_boxes.append(boss_bb)
-    print(f"[BOSS] 충돌 박스 추가: {boss_bb}")
-
-    # 보스방에서는 출구 없음
-    exit_zone = None
+    spawn_random_monsters(count=5)
 
     # 던전1 출구 설정 (상단 문 위치)
     exit_zone = (580, 680, 700, 736)  # (left, bottom, right, top)
@@ -333,9 +322,9 @@ def change_to_boss_room():
     # 충돌 박스 업데이트
     collision_boxes = tiled_map.get_collision_boxes()
 
-    # 플레이어 위치 설정
-    server.player.x = 640
-    server.player.y = 200
+    # 플레이어 위치 설정 (원래 지정한 위치)
+    server.player.x = 950
+    server.player.y = 50
 
     # UI 다시 생성
     global ui
@@ -461,7 +450,7 @@ def update(dt):
 
     # 몬스터 업데이트
     for monster in monsters[:]:
-        # monster.update(dt, frozen=False, player=server.player)  # 이미 game_world.update에서 호출됨
+        monster.update(dt, frozen=False, player=server.player)
 
         # 보스의 꿀 수집 확인 (QueenBee_Boss인 경우)
         if hasattr(monster, 'check_honey_collected'):

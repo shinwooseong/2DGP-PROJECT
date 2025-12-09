@@ -89,6 +89,22 @@ def init():
         for i, box in enumerate(collision_boxes[:5]):
             print(f"  박스 {i}: {box}")
 
+    # 상점 배경음악 로드 및 재생
+    try:
+        if server.shop_bgm is None:
+            server.shop_bgm = load_music('Sound/shop.mp3')
+            if hasattr(server.shop_bgm, 'set_volume'):
+                server.shop_bgm.set_volume(64)
+        # 마을 배경음 정지
+        if server.village_bgm:
+            server.village_bgm.stop()
+        if server.win_village_bgm:
+            server.win_village_bgm.stop()
+        # 상점 음악 재생
+        server.shop_bgm.play()
+        print("[SHOP] shop.mp3 재생 시작")
+    except Exception as e:
+        print(f"[SHOP] 배경음악 로드 실패: {e}")
 
     if shop_entrance_sound is None:
         shop_entrance_sound = load_wav('Sound/shop_entrance.wav')

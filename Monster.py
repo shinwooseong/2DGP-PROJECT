@@ -647,6 +647,15 @@ class Monster:
         self.hp -= dmg
         if DEBUG_MONSTER:
             print(f"{self.name} took {dmg} dmg. HP={self.hp}")
+
+        # 피격 효과음 재생
+        try:
+            import server
+            if server.se_damaged:
+                server.se_damaged.play()
+        except Exception:
+            pass
+
         if self.hp <= 0:
             self.alive = False
             self.animator.set_state('death')
@@ -685,7 +694,7 @@ class Green_MS(Monster):
         frames_map = {'idle': 5, 'attack': 11, 'damaged': 2, 'death': 5}
         frame_time = {'idle': 0.12, 'attack': 0.07, 'damaged': 0.08, 'death': 0.15}
         self.animator = Animator('MS/green_ms', frames_map, frame_time)
-        self.combat = Combat(attack_power=15, attack_range=120, cooldown=1.0, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
+        self.combat = Combat(attack_power=10, attack_range=140, cooldown=1.0, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=120, sight_range=400)
         self.state = self.animator.state
 
@@ -703,9 +712,9 @@ class Trash_Monster(Monster):
             'attack': 6,
             'death': 3,
         }
-        frame_time = {'idle': 0.1, 'sleep': 0.1, 'damaged1': 0.08, 'damaged2': 0.08, 'attack': 0.07, 'death': 0.2}
+        frame_time = {'idle': 0.2, 'sleep': 0.1, 'damaged1': 0.08, 'damaged2': 0.08, 'attack': 0.07, 'death': 0.2}
         self.animator = Animator('', frames_map, frame_time, layout='grid', single_image_path=sheet_path)
-        self.combat = Combat(attack_power=25, attack_range=50, cooldown=1.5, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
+        self.combat = Combat(attack_power=15, attack_range=50, cooldown=1.5, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=0, sight_range=300)
         # start sleeping until player detected
         self.animator.set_state('sleep')
@@ -717,6 +726,15 @@ class Trash_Monster(Monster):
         self.hp -= dmg
         if DEBUG_MONSTER:
             print(f"{self.name} took {dmg} dmg. HP={self.hp}")
+
+        # 피격 효과음 재생
+        try:
+            import server
+            if server.se_damaged:
+                server.se_damaged.play()
+        except Exception:
+            pass
+
         if self.hp <= 0:
             self.alive = False
             self.animator.set_state('death')
@@ -749,7 +767,7 @@ class Red_MS(Monster):
         frame_time = {'idle': 0.11, 'attack': 0.06, 'damaged': 0.09, 'death': 0.15}
         # use vertical layout so each state's PNG is interpreted as vertically stacked frames
         self.animator = Animator('MS/red_magic_ms', frames_map, frame_time, layout='vertical')
-        self.combat = Combat(attack_power=15, attack_range=90, cooldown=1.0, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
+        self.combat = Combat(attack_power=14, attack_range=50, cooldown=1.0, attack_frames=frames_map['attack'], hit_frame=frames_map['attack']//2)
         # give it a patrol so it moves a bit
         self.ai = SimpleAI(patrol_origin_x=x, patrol_width=150, sight_range=450)
         self.state = self.animator.state

@@ -168,6 +168,12 @@ class Main_character:
                 }
             )
             self.state_machine.cur_state.enter(None)
+            # 변신 해제 효과음 재생
+            try:
+                if server.se_transform:
+                    server.se_transform.play()
+            except Exception:
+                pass
             print(f"변신 해제! 공격력: {self.attack}")
         else:
             # 변신: Hurt 애니메이션 재생 후 변신 상태로 전환
@@ -179,6 +185,12 @@ class Main_character:
             # TransformHurt 상태 생성 (아직 없으므로 즉시 변신)
             self.state_machine = self.transform_state_machine
             self.state_machine.cur_state = self.TRANSFORM_IDLE
+            # 변신 효과음 재생
+            try:
+                if server.se_transform:
+                    server.se_transform.play()
+            except Exception:
+                pass
             self.state_machine.cur_state.enter(None)
 
             # Hurt 애니메이션을 한 번 재생
@@ -312,6 +324,14 @@ class Main_character:
         except Exception:
             self.health = getattr(self, 'health', 0) - damage
         print(f"Player took {damage} dmg. HP={self.health}")
+
+        # 피격 효과음 재생
+        try:
+            if server.se_damaged:
+                server.se_damaged.play()
+        except Exception:
+            pass
+
         if self.health <= 0:
             self.health = 0
             self.is_dead = True  # 죽음 플래그 설정
