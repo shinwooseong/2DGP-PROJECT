@@ -21,6 +21,7 @@ ui = None
 collision_boxes = []  # 충돌 영역
 npc = None
 npc_item: NPC = None
+se_check = None  # check.wav 효과음
 
 # 던전 출구 영역 (타일 좌표 x 37~41, y 5) 우상단 길 있는 곳
 exit_zone_dungeon = None
@@ -44,7 +45,7 @@ came_from_dungeon = False
 
 def init():
     global tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop, came_from_dungeon
-    global npc, npc_item, npc_dialogue_box_image
+    global npc, npc_item, npc_dialogue_box_image, se_check
 
     # 마을 진입 시 카메라 완전 초기화
     if getattr(server, 'tiled_map', None) is not None:
@@ -57,6 +58,38 @@ def init():
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')  # 던전 입구용
     npc_dialogue_box_image = load_image('UI/NPC_text.png')  # NPC 대화용
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
+
+    # check.wav 효과음 로드
+    try:
+        se_check = load_wav('Sound/check.wav')
+        if hasattr(se_check, 'set_volume'):
+            se_check.set_volume(64)
+        print("[Village] check.wav 로드 완료")
+    except Exception as e:
+        se_check = None
+        print(f"[Village] check.wav 로드 실패: {e}")
+
+    # attack.wav 효과음 로드 (server에도 저장)
+    try:
+        se_attack = load_wav('Sound/attack.wav')
+        if hasattr(se_attack, 'set_volume'):
+            se_attack.set_volume(64)
+        server.se_attack = se_attack
+        print("[Village] attack.wav 로드 완료")
+    except Exception as e:
+        server.se_attack = None
+        print(f"[Village] attack.wav 로드 실패: {e}")
+
+    # potion.wav 효과음 로드 (server에도 저장)
+    try:
+        se_potion = load_wav('Sound/potion.wav')
+        if hasattr(se_potion, 'set_volume'):
+            se_potion.set_volume(64)
+        server.se_potion = se_potion
+        print("[Village] potion.wav 로드 완료")
+    except Exception as e:
+        server.se_potion = None
+        print(f"[Village] potion.wav 로드 실패: {e}")
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/village.json', use_camera=False)
@@ -248,6 +281,12 @@ def handle_events():
                                   f"loot2={server.player.loot_inventory.get('loot2', 0)}, "
                                   f"loot3={server.player.loot_inventory.get('loot3', 0)}, "
                                   f"loot4={server.player.loot_inventory.get('loot4', 0)}")
+                            # 거래 성공 시 check.wav 재생
+                            try:
+                                if se_check:
+                                    se_check.play()
+                            except Exception as e:
+                                print(f"[SE] check.wav 재생 실패: {e}")
                         # 거래 후에도 대화창은 유지 (업데이트된 전리품 개수 확인 가능)
                 # Y 키: 아이템 NPC와 거래 실행
                 elif show_npc_dialogue and active_npc is not None and active_npc.npc_type == 'item':
@@ -255,6 +294,12 @@ def handle_events():
                         # 거래 실행
                         if active_npc.trade_item(server.player):
                             print(f"[거래 성공] 현재 소지금: {server.player.money}골드")
+                            # 거래 성공 시 check.wav 재생
+                            try:
+                                if se_check:
+                                    se_check.play()
+                            except Exception as e:
+                                print(f"[SE] check.wav 재생 실패: {e}")
                         # 거래 후에도 대화창은 유지
             elif event.key == SDLK_n:
                 # N 키: 거래 취소 (대화 종료)

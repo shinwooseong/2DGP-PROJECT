@@ -42,6 +42,11 @@ dialogue_font = None  # 대화 폰트
 # BGM 변수
 bgm = None
 
+# 효과음 변수
+se_attack = None  # 플레이어 공격 효과음
+se_monster_hit = None  # 몬스터 피격 효과음
+se_potion = None  # 포션 사용 효과음
+
 def is_position_valid(x, y, min_distance=100):
     """위치가 충돌 박스와 겹치지 않고, 다른 몬스터와도 충분히 떨어져 있는지 확인"""
     # 충돌 박스와 겹치는지 확인
@@ -100,7 +105,7 @@ def spawn_random_monsters(count=5):
 
 def init():
     global tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone, pendant_image, dialogue_font, show_return_prompt
-    global came_from_boss_room, bgm
+    global came_from_boss_room, bgm, se_attack, se_monster_hit, se_potion
 
     # BGM 로드 및 재생 (한 번만)
     if bgm is None:
@@ -109,7 +114,39 @@ def init():
             bgm.set_volume(64)
         bgm.repeat_play()
 
+    # 효과음 로드
+    try:
+        se_attack = load_wav('Sound/attack.wav')
+        if hasattr(se_attack, 'set_volume'):
+            se_attack.set_volume(64)
+        server.se_attack = se_attack  # server에 저장
+        print("[Dungeon] attack.wav 로드 완료")
+    except Exception as e:
+        se_attack = None
+        server.se_attack = None
+        print(f"[Dungeon] attack.wav 로드 실패: {e}")
 
+    try:
+        se_monster_hit = load_wav('Sound/monster_hit.wav')
+        if hasattr(se_monster_hit, 'set_volume'):
+            se_monster_hit.set_volume(64)
+        server.se_monster_hit = se_monster_hit  # server에 저장
+        print("[Dungeon] monster_hit.wav 로드 완료")
+    except Exception as e:
+        se_monster_hit = None
+        server.se_monster_hit = None
+        print(f"[Dungeon] monster_hit.wav 로드 실패: {e}")
+
+    try:
+        se_potion = load_wav('Sound/potion.wav')
+        if hasattr(se_potion, 'set_volume'):
+            se_potion.set_volume(64)
+        server.se_potion = se_potion  # server에 저장
+        print("[Dungeon] potion.wav 로드 완료")
+    except Exception as e:
+        se_potion = None
+        server.se_potion = None
+        print(f"[Dungeon] potion.wav 로드 실패: {e}")
 
     # 던전1부터 시작
     current_dungeon = 3
@@ -502,6 +539,7 @@ def update(dt):
     player_attack_bb = server.player.get_bb()
     if player_attack_bb is not None and hasattr(server.player, 'attack_hit_pending') and server.player.attack_hit_pending:
         left, bottom, right, top = player_attack_bb
+
         for monster in monsters[:]:
             if not monster.alive:
                 continue
@@ -521,6 +559,14 @@ def update(dt):
             if not (left > monster_right or right < monster_left or
                     bottom > monster_top or top < monster_bottom):
                 monster.take_damage(server.player.attack)
+
+                # 몬스터 피격 - monster_hit.wav 재생
+                try:
+                    if se_monster_hit:
+                        se_monster_hit.play()
+                except Exception as e:
+                    print(f"[SE] monster_hit.wav 재생 실패: {e}")
+
                 print(f"플레이어가 {monster.name}에게 {server.player.attack} 데미지!")
 
         server.player.attack_hit_pending = False

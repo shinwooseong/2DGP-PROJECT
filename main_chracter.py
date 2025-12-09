@@ -31,8 +31,8 @@ class Main_character:
         self.frame = 0
 
         # 3. 스탯
-        self.health = 100
-        self.max_health = 100
+        self.health = 300
+        self.max_health = 300
         self.money = 0
 
         # 포션 개수
@@ -76,7 +76,7 @@ class Main_character:
         # 무적 시간 관련
         self.invincible = False  # 무적 상태 여부
         self.invincible_timer = 0.0  # 무적 시간 타이머
-        self.invincible_duration = 1.5  # 무적 지속 시간
+        self.invincible_duration = 1.0  # 무적 지속 시간 (1초)
 
         # 8. 기본 캐릭터 상태 인스턴스 (player_states에서 가져옴)
         self.IDLE = player_states.Idle(self)
@@ -335,6 +335,15 @@ class Main_character:
             self.health = min(self.health + heal_amount, self.max_health)
 
             print(f"[포션 사용] 체력 {heal_amount} 회복! 현재 체력: {self.health}/{self.max_health}, 남은 포션: {self.hp_potion_count}")
+
+            # 포션 사용 효과음 재생
+            try:
+                import dungeon_mode
+                if dungeon_mode.se_potion:
+                    dungeon_mode.se_potion.play()
+            except Exception as e:
+                print(f"[SE] potion.wav 재생 실패: {e}")
+
             return True
         else:
             print("[포션] 포션이 없습니다!")

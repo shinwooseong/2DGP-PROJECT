@@ -213,6 +213,13 @@ class Attack:
         self._hit_done = False
         self.character.attack_hit_pending = False
 
+        # 공격 시작 시 attack.wav 재생
+        try:
+            if server.se_attack:
+                server.se_attack.play()
+        except Exception as e:
+            pass
+
     def exit(self, e):
         pass
 

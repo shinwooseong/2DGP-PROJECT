@@ -20,6 +20,7 @@ SCREEN_HEIGHT = 736
 tiled_map: TiledMap = None
 ui = None
 npc_water = None
+se_check = None  # check.wav 효과음
 collision_boxes = []  # 충돌 영역 (레이어 1: Collisions)
 
 # NPC 대화 관련 변수
@@ -32,11 +33,43 @@ dialogue_font = None
 came_from_village = True
 
 def init():
-    global tiled_map, collision_boxes, ui, npc_water, dialogue_box_image, dialogue_font
+    global tiled_map, collision_boxes, ui, npc_water, dialogue_box_image, dialogue_font, se_check
 
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
+
+    # check.wav 효과음 로드
+    try:
+        se_check = load_wav('Sound/check.wav')
+        if hasattr(se_check, 'set_volume'):
+            se_check.set_volume(64)
+        print("[Shop] check.wav 로드 완료")
+    except Exception as e:
+        se_check = None
+        print(f"[Shop] check.wav 로드 실패: {e}")
+
+    # attack.wav 효과음 로드 (server에도 저장)
+    try:
+        se_attack = load_wav('Sound/attack.wav')
+        if hasattr(se_attack, 'set_volume'):
+            se_attack.set_volume(64)
+        server.se_attack = se_attack
+        print("[Shop] attack.wav 로드 완료")
+    except Exception as e:
+        server.se_attack = None
+        print(f"[Shop] attack.wav 로드 실패: {e}")
+
+    # potion.wav 효과음 로드 (server에도 저장)
+    try:
+        se_potion = load_wav('Sound/potion.wav')
+        if hasattr(se_potion, 'set_volume'):
+            se_potion.set_volume(64)
+        server.se_potion = se_potion
+        print("[Shop] potion.wav 로드 완료")
+    except Exception as e:
+        server.se_potion = None
+        print(f"[Shop] potion.wav 로드 실패: {e}")
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/shop.json')
@@ -113,6 +146,12 @@ def handle_events():
                         # 물 NPC와 거래 (포션 구매)
                         if active_npc.trade_water(server.player):
                             print(f"[거래 성공] 포션 2개 구매! 현재 포션: {server.player.hp_potion_count}개")
+                            # 거래 성공 시 check.wav 재생
+                            try:
+                                if se_check:
+                                    se_check.play()
+                            except Exception as e:
+                                print(f"[SE] check.wav 재생 실패: {e}")
                         else:
                             print("[거래 실패] 돈이 부족합니다!")
                     print("NPC 대화 종료")

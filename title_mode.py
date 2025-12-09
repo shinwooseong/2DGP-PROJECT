@@ -10,20 +10,38 @@ image = None
 dialogue_box_image = None
 dialogue_font = None
 show_tutorial = False  # 튜토리얼 표시 여부
+bgm = None  # 타이틀 BGM
 
 def init():
-    global image, dialogue_box_image, dialogue_font
+    global image, dialogue_box_image, dialogue_font, bgm
     image = load_image('UI/moonlighter_logo.png')
 
     # 튜토리얼 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/NPC_text.png')
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 24)
 
+    # 타이틀 BGM 로드 및 재생
+    if bgm is None:
+        try:
+            bgm = load_music('Sound/title.mp3')
+            if hasattr(bgm, 'set_volume'):
+                bgm.set_volume(64)
+            bgm.repeat_play()
+            print("[BGM] title.mp3 재생 시작")
+        except Exception as e:
+            print(f"[BGM] 로드 실패: {e}")
+            bgm = None
+
 def finish():
-    global image, dialogue_box_image, dialogue_font
+    global image, dialogue_box_image, dialogue_font, bgm
     del image
     del dialogue_box_image
     del dialogue_font
+
+    # 타이틀 BGM 정지
+    if bgm:
+        bgm.stop()
+
 
 def update(dt):
     pass # 타이틀은 정적이므로 update에서 할 일이 없음

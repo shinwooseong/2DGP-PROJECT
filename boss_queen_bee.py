@@ -5,6 +5,7 @@ from boss_bees import BeeSting, BossBullet
 from boss_honey import Honey
 import server
 import os
+from pico2d import load_wav
 
 class QueenBee_Boss(Monster):
     def __init__(self, x=640, y=368):
@@ -123,6 +124,16 @@ class QueenBee_Boss(Monster):
 
         # enraged2(더 강화): HP <= 380일 때
         self.enraged2 = False
+
+        # 효과음 로드
+        self.se_queen_shot = None
+        try:
+            self.se_queen_shot = load_wav('Sound/queen_shot2.wav')
+            if hasattr(self.se_queen_shot, 'set_volume'):
+                self.se_queen_shot.set_volume(64)
+            print("[BOSS] queen_shot2.wav 로드 완료")
+        except Exception as e:
+            print(f"[BOSS] 효과음 로드 실패: {e}")
 
     def update(self, dt=0.01, frozen=False, player=None):
         if frozen or not self.alive:
@@ -288,7 +299,7 @@ class QueenBee_Boss(Monster):
             if distance_to_boss > boss_exclusion_radius:
                 honey = Honey(x, y)
                 self.honey_objects.append(honey)
-                game_world.add_object(honey, 0)  # Layer 0 (배경)에 추가하여 플레이어 아래 그려지게
+                game_world.add_object(honey, 1)  # Layer 1 (플레이어 레이어)에 추가하여 update 호출되도록 수정
                 print(f"[BOSS] 꿀 생성 #{len(self.honey_objects)}: ({x}, {y})")
 
             attempts += 1
@@ -298,12 +309,21 @@ class QueenBee_Boss(Monster):
 
     def spawn_enraged_bullets(self, count=12, speed=260, damage=15):
         import math
+
         cx = self.x
         cy = self.y
         for i in range(count):
             angle = (2.0 * math.pi) * (i / float(count))
             b = BossBullet(cx, cy, angle, speed=speed, damage=damage)
             game_world.add_object(b, 1)
+
+        # 효과음 재생
+        try:
+            if self.se_queen_shot:
+                self.se_queen_shot.play()
+        except Exception as e:
+            print(f"[SE] 재생 실패: {e}")
+
         print(f"[BOSS] Enraged 발사: {count}개 발사 (speed={speed}, dmg={damage})")
 
     def check_honey_collected(self):
