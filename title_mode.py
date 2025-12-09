@@ -3,6 +3,7 @@ from sdl2 import SDL_KEYDOWN, SDLK_ESCAPE, SDLK_SPACE, SDLK_k, SDLK_h
 
 import game_framework
 import village_mode
+import opening_mode
 import main_chracter
 import shop_mode
 
@@ -99,7 +100,8 @@ def handle_events():
                 # H 키: 튜토리얼 토글
                 show_tutorial = not show_tutorial
             elif event.key == SDLK_k:
-                game_framework.change_mode(village_mode)
+                # K 키: 오프닝 모드로 이동
+                game_framework.change_mode(opening_mode)
 
 def pause(): pass
 def resume(): pass
