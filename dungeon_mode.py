@@ -39,6 +39,9 @@ show_return_prompt = False  # 귀환 확인 메시지 표시 여부
 return_cost = 200  # 귀환 비용
 dialogue_font = None  # 대화 폰트
 
+# BGM 변수
+bgm = None
+
 def is_position_valid(x, y, min_distance=100):
     """위치가 충돌 박스와 겹치지 않고, 다른 몬스터와도 충분히 떨어져 있는지 확인"""
     # 충돌 박스와 겹치는지 확인
@@ -97,7 +100,15 @@ def spawn_random_monsters(count=5):
 
 def init():
     global tiled_map, collision_boxes, ui, current_dungeon, all_monsters_cleared, message_font, exit_zone, pendant_image, dialogue_font, show_return_prompt
-    global came_from_boss_room
+    global came_from_boss_room, bgm
+
+    # BGM 로드 및 재생 (한 번만)
+    if bgm is None:
+        bgm = load_music('Sound/dungeon.mp3')
+        if hasattr(bgm, 'set_volume'):
+            bgm.set_volume(64)
+        bgm.repeat_play()
+
 
 
     # 던전1부터 시작
@@ -127,8 +138,6 @@ def init():
     ui.set_player(server.player)
     ui.is_in_dungeon = True
     game_world.add_object(ui, 2)
-
-
 
     # 게임 월드에 객체 추가
     game_world.add_object(tiled_map, 0)
@@ -161,10 +170,18 @@ def init():
 def finish():
     # 던전 나가면 UI 포함 모든 객체 제거
     game_world.clear()
-    global collision_boxes, ui, monsters
+    global collision_boxes, ui, monsters, bgm
     collision_boxes = []
     monsters = []
     ui = None
+
+    # BGM 정지
+    if bgm:
+        try:
+            bgm.stop()
+            print("[BGM] dungeon.mp3 정지")
+        finally:
+            bgm = None
 
 def handle_events():
     global show_return_prompt, came_from_boss_room
