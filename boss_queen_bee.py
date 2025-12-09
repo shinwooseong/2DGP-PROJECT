@@ -228,7 +228,7 @@ class QueenBee_Boss(Monster):
         max_y = map_h - 10
 
         # 왼쪽에서 오른쪽으로 3개 세트 발사
-        for i in range(3):
+        for i in range(2):
             speed = random.randint(400, 600)
             left_sting = BeeSting(x=-50, y=random.randint(min_y, max_y), direction=1, speed=speed)
             game_world.add_object(left_sting, 1)

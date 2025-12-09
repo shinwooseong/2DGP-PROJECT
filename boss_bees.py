@@ -117,8 +117,8 @@ class BeeSting:
             self.animator.draw(screen_x, screen_y, self.scale)
 
     def get_bb(self):
-        return (self.x - self.width // 2 + 10, self.y - self.height // 2 +10,
-                self.x + self.width // 2 - 30, self.y + self.height // 2 - 30)
+        return (self.x - self.width // 2 + 20, self.y - self.height // 2 +20,
+                self.x + self.width // 2 - 40, self.y + self.height // 2 - 40)
 
 
 # 보스의 원형 발사체 (각도 기반)
