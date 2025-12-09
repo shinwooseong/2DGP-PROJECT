@@ -32,44 +32,17 @@ dialogue_font = None
 # 상점 진입 위치 저장 변수 (마을에서 왔는지 다른 곳에서 왔는지)
 came_from_village = True
 
+shop_entrance_sound = None
+
 def init():
-    global tiled_map, collision_boxes, ui, npc_water, dialogue_box_image, dialogue_font, se_check
+    global tiled_map, collision_boxes, ui, npc_water, dialogue_box_image, dialogue_font, se_check, shop_entrance_sound
 
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 28)
 
-    # check.wav 효과음 로드
-    try:
-        se_check = load_wav('Sound/check.wav')
-        if hasattr(se_check, 'set_volume'):
-            se_check.set_volume(64)
-        print("[Shop] check.wav 로드 완료")
-    except Exception as e:
-        se_check = None
-        print(f"[Shop] check.wav 로드 실패: {e}")
-
-    # attack.wav 효과음 로드 (server에도 저장)
-    try:
-        se_attack = load_wav('Sound/attack.wav')
-        if hasattr(se_attack, 'set_volume'):
-            se_attack.set_volume(64)
-        server.se_attack = se_attack
-        print("[Shop] attack.wav 로드 완료")
-    except Exception as e:
-        server.se_attack = None
-        print(f"[Shop] attack.wav 로드 실패: {e}")
-
-    # potion.wav 효과음 로드 (server에도 저장)
-    try:
-        se_potion = load_wav('Sound/potion.wav')
-        if hasattr(se_potion, 'set_volume'):
-            se_potion.set_volume(64)
-        server.se_potion = se_potion
-        print("[Shop] potion.wav 로드 완료")
-    except Exception as e:
-        server.se_potion = None
-        print(f"[Shop] potion.wav 로드 실패: {e}")
+    # 효과음은 server.init_all_sounds()에서 이미 로드됨
+    # 따라서 여기서는 별도 로드 불필요
 
     # 1. 타일드 맵 로드
     tiled_map = TiledMap('map/shop.json')
@@ -116,12 +89,26 @@ def init():
         for i, box in enumerate(collision_boxes[:5]):
             print(f"  박스 {i}: {box}")
 
+
+    if shop_entrance_sound is None:
+        shop_entrance_sound = load_wav('Sound/shop_entrance.wav')
+        if hasattr(shop_entrance_sound, 'set_volume'):
+            shop_entrance_sound.set_volume(20)
+    shop_entrance_sound.play()
+
+
 def finish():
     # 상점 나가면 UI 포함 모든 객체 제거
     game_world.clear()
-    global collision_boxes, ui
+    global collision_boxes, ui, shop_entrance_sound
     collision_boxes = []
     ui = None
+
+    if shop_entrance_sound is None:
+        shop_entrance_sound = load_wav('Sound/shop_entrance.wav')
+        if hasattr(shop_entrance_sound, 'set_volume'):
+            shop_entrance_sound.set_volume(20)
+    shop_entrance_sound.play()
 
 def handle_events():
     global show_npc_dialogue, active_npc
@@ -226,6 +213,7 @@ def update(dt):
         village_mode.came_from_shop = True  # 상점에서 나왔다는 플래그 설정
         game_framework.change_mode(village_mode)
         return
+
 
 def draw():
     clear_canvas()

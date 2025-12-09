@@ -1,5 +1,5 @@
 import time
-from pico2d import load_image
+from pico2d import load_image, load_wav
 from transform_loader import TRANSFORM_SPRITE_W, TRANSFORM_SPRITE_H, TRANSFORM_FOOT_OFFSET_Y
 import server
 
@@ -8,6 +8,9 @@ from character_constants import (
     SCREEN_W, SCREEN_H,
     TRANSFORM_COLLISION_W, TRANSFORM_COLLISION_H
 )
+
+# 변신 전용 공격 사운드
+se_trans_attack = None
 
 # 몸집이 작아서 속도가 더 빠름
 WALK_SPEED = 180.0
@@ -162,6 +165,13 @@ class TransformRoll:
         self.character.frame_time_acc = 0.0
         self.character.roll_moved = 0.0
 
+        # 서버 전역 구르기 효과음 재생
+        try:
+            if getattr(server, 'se_roll', None):
+                server.se_roll.play()
+        except Exception:
+            pass
+
     def exit(self, e):
         pass
 
@@ -256,11 +266,11 @@ class TransformAttack:
         self._hit_done = False
         self.character.attack_hit_pending = False
 
-        # 공격 시작 시 attack.wav 재생
+        # 공격 시작 시 trans_attack.wav 재생 (변신 전용, server에서 로드)
         try:
-            if server.se_attack:
-                server.se_attack.play()
-        except Exception as e:
+            if getattr(server, 'se_trans_attack', None):
+                server.se_trans_attack.play()
+        except Exception:
             pass
 
     def exit(self, e):

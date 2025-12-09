@@ -111,42 +111,8 @@ def init():
     if bgm is None:
         bgm = load_music('Sound/dungeon.mp3')
         if hasattr(bgm, 'set_volume'):
-            bgm.set_volume(64)
+            bgm.set_volume(128)
         bgm.repeat_play()
-
-    # 효과음 로드
-    try:
-        se_attack = load_wav('Sound/attack.wav')
-        if hasattr(se_attack, 'set_volume'):
-            se_attack.set_volume(64)
-        server.se_attack = se_attack  # server에 저장
-        print("[Dungeon] attack.wav 로드 완료")
-    except Exception as e:
-        se_attack = None
-        server.se_attack = None
-        print(f"[Dungeon] attack.wav 로드 실패: {e}")
-
-    try:
-        se_monster_hit = load_wav('Sound/monster_hit.wav')
-        if hasattr(se_monster_hit, 'set_volume'):
-            se_monster_hit.set_volume(64)
-        server.se_monster_hit = se_monster_hit  # server에 저장
-        print("[Dungeon] monster_hit.wav 로드 완료")
-    except Exception as e:
-        se_monster_hit = None
-        server.se_monster_hit = None
-        print(f"[Dungeon] monster_hit.wav 로드 실패: {e}")
-
-    try:
-        se_potion = load_wav('Sound/potion.wav')
-        if hasattr(se_potion, 'set_volume'):
-            se_potion.set_volume(64)
-        server.se_potion = se_potion  # server에 저장
-        print("[Dungeon] potion.wav 로드 완료")
-    except Exception as e:
-        se_potion = None
-        server.se_potion = None
-        print(f"[Dungeon] potion.wav 로드 실패: {e}")
 
     # 던전1부터 시작
     current_dungeon = 3

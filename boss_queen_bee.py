@@ -5,7 +5,6 @@ from boss_bees import BeeSting, BossBullet
 from boss_honey import Honey
 import server
 import os
-from pico2d import load_wav
 
 class QueenBee_Boss(Monster):
     def __init__(self, x=640, y=368):
@@ -125,16 +124,6 @@ class QueenBee_Boss(Monster):
         # enraged2(더 강화): HP <= 380일 때
         self.enraged2 = False
 
-        # 효과음 로드
-        self.se_queen_shot = None
-        try:
-            self.se_queen_shot = load_wav('Sound/queen_shot2.wav')
-            if hasattr(self.se_queen_shot, 'set_volume'):
-                self.se_queen_shot.set_volume(64)
-            print("[BOSS] queen_shot2.wav 로드 완료")
-        except Exception as e:
-            print(f"[BOSS] 효과음 로드 실패: {e}")
-
     def update(self, dt=0.01, frozen=False, player=None):
         if frozen or not self.alive:
             return
@@ -250,6 +239,8 @@ class QueenBee_Boss(Monster):
             right_sting = BeeSting(x=map_w + 50, y=random.randint(min_y, max_y), direction=-1, speed=speed)
             game_world.add_object(right_sting, 1)
 
+        if server.se_bee_fly:
+            server.se_bee_fly.play()
 
     def spray_honey(self):
         if not self.spray_animator:
@@ -278,8 +269,8 @@ class QueenBee_Boss(Monster):
                 pass
         self.honey_objects.clear()
 
-        # 꿀 개수: enraged2 모드이면 10개, 아니면 5개
-        honey_count = 10 if getattr(self, 'enraged2', False) else 5
+        # 꿀 개수: enraged2 모드이면 13개, 아니면 5개
+        honey_count = 13 if getattr(self, 'enraged2', False) else 5
         margin = 250    # 맵 가장자리에서 떨어진 거리
         boss_exclusion_radius = 250 # 보스 위치에서 이 거리 이내에는 꿀 생성 금지
 
@@ -319,8 +310,8 @@ class QueenBee_Boss(Monster):
 
         # 효과음 재생
         try:
-            if self.se_queen_shot:
-                self.se_queen_shot.play()
+            if server.se_queen_shot:
+                server.se_queen_shot.play()
         except Exception as e:
             print(f"[SE] 재생 실패: {e}")
 

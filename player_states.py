@@ -132,6 +132,13 @@ class Roll:
         self.character.frame_time_acc = 0.0
         self.character.roll_moved = 0.0
 
+        # 서버 전역 구르기 효과음 재생
+        try:
+            if getattr(server, 'se_roll', None):
+                server.se_roll.play()
+        except Exception:
+            pass
+
     def exit(self, e):
         pass
 
