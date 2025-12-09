@@ -12,15 +12,17 @@ SCREEN_HEIGHT = 736
 # 엔딩 씬 관련 변수
 dialogue_box_image = None
 dialogue_font = None
+background_image = None
 npcs = []  # NPC 리스트
 show_ending = False
 
 def init():
-    global dialogue_box_image, dialogue_font, npcs, show_ending
+    global dialogue_box_image, dialogue_font, npcs, show_ending, background_image
 
     # 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/NPC_text.png')
     dialogue_font = load_font('UI/use_font/MaruBuri-Bold.ttf', 32)
+    background_image = load_image('map/dungeon.png')
 
     # 엔딩 시작
     show_ending = True
@@ -78,6 +80,10 @@ def update(dt):
 def draw():
     clear_canvas()
 
+    # 배경 이미지 그리기
+    if background_image:
+        background_image.draw(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
     # NPC 그리기 (오른쪽부터 역순으로 그리기 - 좌우 균형)
     for i, npc in enumerate(npcs):
         if npc.image and not npc.composite:
@@ -121,6 +127,8 @@ def handle_events():
         elif event.type == SDL_KEYDOWN:
             if event.key == SDLK_RETURN:
                 # 엔터 키를 누르면 마을로 돌아가기
+                import server
+                server.player.dir = 'DOWN'  # 플레이어 방향을 DOWN으로 고정
                 village_mode.came_from_dungeon = False
                 game_framework.change_mode(village_mode)
 

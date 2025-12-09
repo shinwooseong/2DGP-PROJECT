@@ -46,6 +46,13 @@ def init():
     global tiled_map, collision_boxes, ui, exit_zone_dungeon, exit_zone_shop, dialogue_box_image, dialogue_font, came_from_shop, came_from_dungeon
     global npc, npc_item, npc_dialogue_box_image
 
+    # 마을 진입 시 카메라 완전 초기화
+    if getattr(server, 'tiled_map', None) is not None:
+        server.tiled_map.cam_offset_x = 0
+        server.tiled_map.cam_offset_y = 0
+        server.tiled_map.use_camera = False
+        server.tiled_map = None
+
     # 다이얼로그 이미지와 폰트 로드
     dialogue_box_image = load_image('UI/7 Dialogue Box/1.png')  # 던전 입구용
     npc_dialogue_box_image = load_image('UI/NPC_text.png')  # NPC 대화용
