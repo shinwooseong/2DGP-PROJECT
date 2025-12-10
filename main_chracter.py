@@ -33,10 +33,10 @@ class Main_character:
         # 3. 스탯
         self.health = 100
         self.max_health = 100
-        self.money = 100
+        self.money = 400
 
         # 포션 개수
-        self.hp_potion_count = 0
+        self.hp_potion_count = 2
 
         # 전리품 인벤토리 (loot1 ~ loot4 각각의 개수)
         self.loot_inventory = {
@@ -47,8 +47,8 @@ class Main_character:
         }
 
         # 캐릭터별 공격력 설정
-        self.base_attack = 25  # 기본 캐릭터 공격력
-        self.transform_attack = 12  # 변신 캐릭터 공격력
+        self.base_attack = 28  # 기본 캐릭터 공격력
+        self.transform_attack = 14  # 변신 캐릭터 공격력
         self.attack = self.base_attack  # 현재 공격력 (초기값은 기본 캐릭터)
 
         # 4. 입력 맵

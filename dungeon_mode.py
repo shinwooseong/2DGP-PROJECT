@@ -190,10 +190,10 @@ def handle_events():
             elif event.key == SDLK_s:
                 # S 키: 포션 사용
                 server.player.use_potion()
-            elif event.key == SDLK_RETURN:
-                # ENTER 키를 누르면 shop_mode로 전환
-                import shop_mode
-                game_framework.change_mode(shop_mode)
+            # elif event.key == SDLK_RETURN:
+            #     # ENTER 키를 누르면 shop_mode로 전환
+            #     import shop_mode
+            #     game_framework.change_mode(shop_mode)
             elif event.key == SDLK_z:
                 # Z 키: 귀환 펜던트 사용
                 show_return_prompt = True
