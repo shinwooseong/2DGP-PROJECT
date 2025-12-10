@@ -29,6 +29,9 @@ active_npc = None  # 현재 상호작용 중인 NPC
 dialogue_box_image = None
 dialogue_font = None
 
+# 정수기 구매 확인 상태
+water_trade_confirm = False  # 정수기에서 구매 확인 중인지 여부
+
 # 상점 진입 위치 저장 변수 (마을에서 왔는지 다른 곳에서 왔는지)
 came_from_village = True
 
@@ -127,7 +130,7 @@ def finish():
     shop_entrance_sound.play()
 
 def handle_events():
-    global show_npc_dialogue, active_npc
+    global show_npc_dialogue, active_npc, water_trade_confirm
 
     events = get_events()
     for event in events:
@@ -144,25 +147,58 @@ def handle_events():
             elif event.key == SDLK_RETURN:
                 # 엔터 키로 NPC와 상호작용 또는 대화 종료
                 if show_npc_dialogue:
+                    # 정수기와의 거래 확인 상태인 경우
+                    if water_trade_confirm and active_npc is not None and active_npc.npc_type == 'water':
+                        # 거래 확인 상태에서 엔터는 무시
+                        pass
                     # 대화 중이면 거래 실행 후 대화 종료
-                    if active_npc is not None and active_npc.npc_type == 'water':
+                    elif active_npc is not None and active_npc.npc_type == 'water':
                         # 물 NPC와 거래 (포션 구매)
-                        if active_npc.trade_water(server.player):
-                            print(f"[거래 성공] 포션 2개 구매! 현재 포션: {server.player.hp_potion_count}개")
-                            # 거래 성공 시 check.wav 재생
-                            try:
-                                if se_check:
-                                    se_check.play()
-                            except Exception as e:
-                                print(f"[SE] check.wav 재생 실패: {e}")
+                        if active_npc.can_trade_water(server.player):
+                            # 구매 여부 확인 상태로 진입
+                            water_trade_confirm = True
+                            print("포션 구매 확인 중...")
                         else:
                             print("[거래 실패] 돈이 부족합니다!")
-                    print("NPC 대화 종료")
-                    show_npc_dialogue = False
+                            # 거절 상태로 유지 (엔터를 다시 눌러야 대화 종료)
+                    else:
+                        # 다른 NPC는 엔터로 대화 종료
+                        show_npc_dialogue = False
+                        water_trade_confirm = False
+
+                    if not show_npc_dialogue:
+                        print("NPC 대화 종료")
                 elif active_npc is not None:
                     # NPC가 범위 안에 있으면 대화 시작
                     print(f"NPC와 상호작용: {active_npc.name}")
                     show_npc_dialogue = True
+            # Y 키: 포션 구매 확인
+            elif event.key == ord('y') or event.key == ord('Y'):
+                if show_npc_dialogue and water_trade_confirm and active_npc is not None and active_npc.npc_type == 'water':
+                    if active_npc.trade_water(server.player):
+                        print(f"[거래 성공] 포션 2개 구매! 현재 포션: {server.player.hp_potion_count}개")
+                        # 거래 성공 시 check.wav 재생
+                        try:
+                            if se_check:
+                                se_check.play()
+                        except Exception as e:
+                            print(f"[SE] check.wav 재생 실패: {e}")
+                        show_npc_dialogue = False
+                        water_trade_confirm = False
+                else:
+                    # 대화 중이 아닐 때만 플레이어 이동
+                    if not show_npc_dialogue:
+                        server.player.handle_event(event)
+            # N 키: 포션 구매 거절
+            elif event.key == ord('n') or event.key == ord('N'):
+                if show_npc_dialogue and water_trade_confirm and active_npc is not None and active_npc.npc_type == 'water':
+                    print("[거래 거절] 포션 구매를 취소했습니다.")
+                    water_trade_confirm = False
+                    show_npc_dialogue = False
+                else:
+                    # 대화 중이 아닐 때만 플레이어 이동
+                    if not show_npc_dialogue:
+                        server.player.handle_event(event)
             else:
                 # 대화 중이 아닐 때만 플레이어 이동
                 if not show_npc_dialogue:
@@ -260,10 +296,15 @@ def draw():
                                line, (0, 0, 0))
             y_offset -= 40
 
-        # 거래 안내 또는 대화 종료 안내
-        if active_npc.npc_type == 'water' and active_npc.can_trade_water(server.player):
+        # 정수기 구매 확인 상태인 경우
+        if active_npc.npc_type == 'water' and water_trade_confirm:
+            dialogue_font.draw(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 60,
+                               "구매하시겠습니까? Y/N", (100, 100, 100))
+        # 거래 가능한 상태
+        elif active_npc.npc_type == 'water' and active_npc.can_trade_water(server.player):
             dialogue_font.draw(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 60,
                                "구매: 엔터", (100, 100, 100))
+        # 거래 불가능한 상태
         else:
             dialogue_font.draw(SCREEN_WIDTH // 2 - 250, SCREEN_HEIGHT // 2 - 60,
                                "종료: 엔터", (100, 100, 100))

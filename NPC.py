@@ -151,7 +151,7 @@ class NPC:
             if self.can_trade_water(player):
                 return "포션을 구매하시겠습니까?\n100골드에 포션 2개를 드립니다!"
             else:
-                return "포션은 100골드에 2개입니다!\n돈이 부족하네요."
+                return "죄송하지만 돈이 부족하네요.\n포션은 100골드에 2개입니다!"
         else:
             return "안녕하세요!"
 
